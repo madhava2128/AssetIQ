@@ -1,0 +1,12 @@
+{
+  "name": "assetiq-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix apps/web run dev",
+    "build": "npm --prefix apps/web run build",
+    "start": "npm --prefix apps/web start",
+    "test": "npm --prefix apps/web test",
+    "dev:ml": "cd services/ml && uvicorn src.main:app --reload --port 8000"
+  }
+}

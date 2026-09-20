@@ -1,0 +1,8 @@
+# Ignore serialized model artifacts
+*.pkl
+*.joblib
+*.pt
+*.onnx
+*.bin
+*.h5
+! .gitignore

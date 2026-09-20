@@ -1,0 +1,2 @@
+# Stage 6 LLM explanation layer
+# RULE: Nothing in this folder may import from or write to anything that sets final_status

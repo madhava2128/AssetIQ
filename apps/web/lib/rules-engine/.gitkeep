@@ -1,0 +1,2 @@
+# Stage 4 deterministic rules engine (TypeScript)
+# Must remain fully separable and testable without ML service
