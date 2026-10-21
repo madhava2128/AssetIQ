@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { buildAssetQrUrl, getAppBaseUrl, isLocalhostAddress } from '@/lib/scanner';
+import { buildAssetQrUrl, getAppBaseUrl, isAppBaseUrlValid } from '@/lib/scanner';
 import { TOKENS } from '@/lib/tokens';
 
 interface QrLabelCardProps {
@@ -17,9 +17,12 @@ export default function QrLabelCard({ asset }: QrLabelCardProps) {
     const qrSvgRef = useRef<SVGSVGElement | null>(null);
     const [downloading, setDownloading] = useState(false);
 
-    const qrUrl = buildAssetQrUrl(asset.id);
     const baseUrl = getAppBaseUrl();
-    const isLocalhost = isLocalhostAddress(baseUrl);
+    const isAddressValid = isAppBaseUrlValid(baseUrl);
+    const qrUrl = buildAssetQrUrl(asset.id);
+
+    const isDifferentOrigin = typeof window !== 'undefined' && 
+        window.location.origin.replace(/\/+$/, '').toLowerCase() !== baseUrl.toLowerCase();
 
     const handleDownloadPng = async () => {
         try {
@@ -136,24 +139,31 @@ export default function QrLabelCard({ asset }: QrLabelCardProps) {
             </div>
 
             <div className="p-5 space-y-4">
-                {/* Localhost Warning Banner */}
-                {isLocalhost && (
-                    <div className="p-3 bg-status-atrisk-bg border border-status-atrisk-solid rounded-[4px] text-status-atrisk-text text-caption leading-relaxed">
-                        <p className="font-semibold">Notice for phone scanning:</p>
-                        <p>QR codes will not work on other devices until the public app address is set.</p>
+                {/* Invalid Address Warning Banner */}
+                {!isAddressValid ? (
+                    <div className="p-3 bg-status-notready-bg border border-status-notready-solid rounded-[4px] text-status-notready-text text-caption leading-relaxed">
+                        <p className="font-semibold">QR codes cannot be used yet.</p>
+                        <p>The public app address is not set up correctly.</p>
                     </div>
-                )}
+                ) : null}
 
                 {/* QR Card Presentation */}
                 <div className="flex flex-col items-center justify-center p-4 bg-white border border-border rounded-[6px] space-y-3">
                     <div className="p-3 bg-white border border-border-strong rounded-[4px] flex items-center justify-center">
-                        <QRCodeSVG
-                            ref={qrSvgRef}
-                            value={qrUrl}
-                            size={180}
-                            level="M"
-                            includeMargin={true}
-                        />
+                        {isAddressValid ? (
+                            <QRCodeSVG
+                                ref={qrSvgRef}
+                                value={qrUrl}
+                                size={180}
+                                level="M"
+                                includeMargin={true}
+                            />
+                        ) : (
+                            <div className="w-[180px] h-[180px] border border-dashed border-border-strong rounded-[4px] flex flex-col items-center justify-center p-3 text-center bg-panel-header text-text-muted text-xs">
+                                <span className="font-semibold text-text-secondary mb-1">QR Code Disabled</span>
+                                <span>Public app address not configured.</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="text-center space-y-1">
@@ -168,6 +178,20 @@ export default function QrLabelCard({ asset }: QrLabelCardProps) {
                     <p className="text-xs text-text-muted text-center max-w-xs">
                         Scan with a phone camera to open this asset in AssetIQ.
                     </p>
+
+                    {/* On screen only: target destination URL & environment check */}
+                    {isAddressValid && (
+                        <div className="w-full pt-1 space-y-1 border-t border-border no-print">
+                            <div className="text-xs text-text-muted text-center break-all font-mono">
+                                Opens: {qrUrl}
+                            </div>
+                            {isDifferentOrigin && (
+                                <div className="text-xs text-status-atrisk-text text-center leading-snug">
+                                    You are viewing the app from a different address than the one used in QR codes.
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Action Buttons */}
@@ -175,8 +199,8 @@ export default function QrLabelCard({ asset }: QrLabelCardProps) {
                     <button
                         type="button"
                         onClick={handleDownloadPng}
-                        disabled={downloading}
-                        className="min-h-[44px] px-4 py-2 bg-panel hover:bg-panel-header text-text-primary border border-border-strong rounded-[4px] text-sm font-medium transition-colors flex items-center justify-center cursor-pointer shadow-none"
+                        disabled={!isAddressValid || downloading}
+                        className="min-h-[44px] px-4 py-2 bg-panel hover:bg-panel-header text-text-primary border border-border-strong rounded-[4px] text-sm font-medium transition-colors flex items-center justify-center cursor-pointer shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {downloading ? 'Preparing PNG...' : 'Download label'}
                     </button>
@@ -184,7 +208,8 @@ export default function QrLabelCard({ asset }: QrLabelCardProps) {
                     <button
                         type="button"
                         onClick={handlePrint}
-                        className="min-h-[44px] px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-[4px] text-sm font-medium transition-colors flex items-center justify-center cursor-pointer shadow-none"
+                        disabled={!isAddressValid}
+                        className="min-h-[44px] px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-[4px] text-sm font-medium transition-colors flex items-center justify-center cursor-pointer shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Print label
                     </button>

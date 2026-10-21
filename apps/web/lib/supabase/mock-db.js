@@ -2756,14 +2756,30 @@ const initialSurgeryRequiredAssets = [
     }
 ];
 
-let assetsStore = [...initialAssets];
-let breakdownsStore = [...initialBreakdowns];
-let maintenanceStore = initialMaintenance.map(m => ({
-    ...m,
-    cost: m.cost && m.cost < 5000 ? m.cost * 80 : (m.cost || 0)
-}));
-let surgeriesStore = [...initialSurgeries];
-let surgeryRequiredAssetsStore = [...initialSurgeryRequiredAssets];
+if (!globalThis.__assetiq_assetsStore) {
+    globalThis.__assetiq_assetsStore = [...initialAssets];
+}
+if (!globalThis.__assetiq_breakdownsStore) {
+    globalThis.__assetiq_breakdownsStore = [...initialBreakdowns];
+}
+if (!globalThis.__assetiq_maintenanceStore) {
+    globalThis.__assetiq_maintenanceStore = initialMaintenance.map(m => ({
+        ...m,
+        cost: m.cost && m.cost < 5000 ? m.cost * 80 : (m.cost || 0)
+    }));
+}
+if (!globalThis.__assetiq_surgeriesStore) {
+    globalThis.__assetiq_surgeriesStore = [...initialSurgeries];
+}
+if (!globalThis.__assetiq_surgeryRequiredAssetsStore) {
+    globalThis.__assetiq_surgeryRequiredAssetsStore = [...initialSurgeryRequiredAssets];
+}
+
+let assetsStore = globalThis.__assetiq_assetsStore;
+let breakdownsStore = globalThis.__assetiq_breakdownsStore;
+let maintenanceStore = globalThis.__assetiq_maintenanceStore;
+let surgeriesStore = globalThis.__assetiq_surgeriesStore;
+let surgeryRequiredAssetsStore = globalThis.__assetiq_surgeryRequiredAssetsStore;
 
 let readinessConfig = {
     id: '00000000-0000-0000-0000-000000000001',
@@ -2828,8 +2844,9 @@ async function updateAsset(id, updates) {
 }
 
 async function deleteAsset(id) {
-    const initialLen = assetsStore.length;
-    assetsStore = assetsStore.filter(a => a.id !== id);
+    const initialLen = globalThis.__assetiq_assetsStore.length;
+    globalThis.__assetiq_assetsStore = globalThis.__assetiq_assetsStore.filter(a => a.id !== id);
+    assetsStore = globalThis.__assetiq_assetsStore;
     return assetsStore.length < initialLen;
 }
 

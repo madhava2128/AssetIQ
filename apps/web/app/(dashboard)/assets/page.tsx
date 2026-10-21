@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { UserRole, canEditAssets } from '@/lib/auth';
 import AssetForm from '../../../components/forms/AssetForm';
 import { formatEnumValue } from '@/lib/formatters';
-import { buildAssetQrUrl } from '@/lib/scanner';
+import { buildAssetQrUrl, isAppBaseUrlValid } from '@/lib/scanner';
 
 export default function AssetsPage() {
+    const router = useRouter();
     const [userRole, setUserRole] = useState<UserRole>('biomedical_engineer');
     const [assets, setAssets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -126,6 +128,13 @@ export default function AssetsPage() {
 
             setShowForm(false);
             setEditingAsset(null);
+
+            // Automatic after registration: navigate to asset details with registered=true
+            if (!editingAsset && data.data?.id) {
+                router.push(`/assets/${data.data.id}?registered=true`);
+                return;
+            }
+
             fetchAssets();
         } catch (err: any) {
             setErrorMessage(err.message || 'Operation failed.');
@@ -154,8 +163,13 @@ export default function AssetsPage() {
 
     // Filtered assets for printing
     const selectedAssetsToPrint = assets.filter(a => selectedAssetIds.includes(a.id));
+    const isAddressValid = isAppBaseUrlValid();
 
     const handlePrintSelected = () => {
+        if (!isAddressValid) {
+            setErrorMessage("QR codes cannot be used yet. The public app address is not set up correctly.");
+            return;
+        }
         if (typeof window !== 'undefined') {
             window.print();
         }
@@ -178,8 +192,9 @@ export default function AssetsPage() {
                             <button
                                 type="button"
                                 onClick={handlePrintSelected}
-                                className="bg-panel hover:bg-panel-header text-text-primary border border-border-strong px-3.5 py-2 rounded-[4px] text-caption font-semibold transition-colors flex items-center gap-2 shadow-none cursor-pointer"
-                                title="Print 50x50mm QR label stickers for selected equipment on an A4 sheet"
+                                disabled={!isAddressValid}
+                                className="bg-panel hover:bg-panel-header text-text-primary border border-border-strong px-3.5 py-2 rounded-[4px] text-caption font-semibold transition-colors flex items-center gap-2 shadow-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={isAddressValid ? "Print 50x50mm QR label stickers for selected equipment on an A4 sheet" : "QR codes cannot be printed. The public app address is not set up correctly."}
                             >
                                 <span>Print {selectedAssetIds.length} QR label{selectedAssetIds.length > 1 ? 's' : ''}</span>
                             </button>

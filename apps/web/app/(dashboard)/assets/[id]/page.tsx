@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { UserRole, canEditAssets } from '@/lib/auth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { UserRole, canEditAssets, getLandingUrlForRole } from '@/lib/auth';
 import { formatEnumValue, getReadinessStatusTheme } from '@/lib/formatters';
 import { formatSurgeryDate } from '@/lib/date-utils';
 import { isValidAssetId } from '@/lib/scanner';
@@ -18,7 +18,9 @@ export default function AssetDetailPage({
     params: { id: string }
 }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const assetId = params.id;
+    const isNewlyRegistered = searchParams?.get('registered') === 'true';
 
     const [userRole, setUserRole] = useState<UserRole | null>(null);
     const [authChecked, setAuthChecked] = useState(false);
@@ -128,7 +130,7 @@ export default function AssetDetailPage({
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-4">
                 <div className="w-full max-w-md bg-panel border border-border rounded-[6px] p-6 text-center space-y-4 shadow-none">
-                    <h1 className="text-xl font-semibold text-text-primary">Invalid Asset ID</h1>
+                    <h1 className="text-xl font-semibold text-text-primary">This QR code is not valid</h1>
                     <p className="text-sm text-text-secondary">
                         The requested equipment identifier format is invalid.
                     </p>
@@ -147,15 +149,35 @@ export default function AssetDetailPage({
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-4">
                 <div className="w-full max-w-md bg-panel border border-border rounded-[6px] p-6 text-center space-y-4 shadow-none">
-                    <h1 className="text-xl font-semibold text-text-primary">Equipment not found</h1>
+                    <h1 className="text-xl font-semibold text-text-primary">Asset not found</h1>
                     <p className="text-sm text-text-secondary">
-                        No medical asset was found matching this identifier.
+                        The requested equipment could not be found or you do not have permission to view it.
                     </p>
                     <Link
                         href="/assets"
                         className="inline-block bg-accent hover:bg-accent-hover text-white text-sm font-medium px-4 py-2 rounded-[4px] transition-colors"
                     >
                         Go to equipment catalog
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (errorState === 'FORBIDDEN') {
+        const homeUrl = userRole ? getLandingUrlForRole(userRole) : '/login';
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-4">
+                <div className="w-full max-w-md bg-panel border border-border rounded-[6px] p-6 text-center space-y-4 shadow-none">
+                    <h1 className="text-xl font-semibold text-text-primary">You don't have access to this page</h1>
+                    <p className="text-sm text-text-secondary">
+                        Your account role does not have permission to view equipment details.
+                    </p>
+                    <Link
+                        href={homeUrl}
+                        className="inline-block bg-accent hover:bg-accent-hover text-white text-sm font-medium px-4 py-2 rounded-[4px] transition-colors"
+                    >
+                        Return to home page
                     </Link>
                 </div>
             </div>
@@ -324,6 +346,23 @@ export default function AssetDetailPage({
 
             {/* 2. Main Content Body on Cool Blue-Grey Page Background */}
             <div className="max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-6">
+                {/* Registration Success Banner (Section 3) */}
+                {isNewlyRegistered && (
+                    <div className="p-4 bg-status-ready-bg border border-status-ready-solid rounded-[4px] text-status-ready-text text-body flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
+                        <div>
+                            <span className="font-semibold">Asset registered. </span>
+                            <span>Download or print its QR label and attach it to the equipment.</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => router.replace(`/assets/${assetId}`)}
+                            className="text-caption underline cursor-pointer font-medium self-end sm:self-auto"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                )}
+
                 {/* Toast Success Message */}
                 {toastMessage && (
                     <div className="p-4 bg-status-ready-bg border border-status-ready-solid rounded-[4px] text-status-ready-text text-body flex items-center justify-between shadow-none">
@@ -338,10 +377,17 @@ export default function AssetDetailPage({
                     </div>
                 )}
 
+                {/* Top QR Label Section when newly registered (Section 3) */}
+                {isNewlyRegistered && (
+                    <div className="w-full">
+                        <QrLabelCard asset={asset} />
+                    </div>
+                )}
+
                 {/* Main Content Layout: Single column on phone, 2 columns on desktop */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className={`grid grid-cols-1 ${isNewlyRegistered ? '' : 'lg:grid-cols-3'} gap-6`}>
                     {/* Left/Main Column */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className={`${isNewlyRegistered ? 'w-full' : 'lg:col-span-2'} space-y-6`}>
                         {/* 2. Health Summary */}
                         <section className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden space-y-0">
                             <div className="panel-header-band">
@@ -419,9 +465,11 @@ export default function AssetDetailPage({
                         </section>
 
                         {/* Mobile placement of QR Card */}
-                        <div className="block lg:hidden">
-                            <QrLabelCard asset={asset} />
-                        </div>
+                        {!isNewlyRegistered && (
+                            <div className="block lg:hidden">
+                                <QrLabelCard asset={asset} />
+                            </div>
+                        )}
 
                         {/* 3. Location and Details */}
                         <section className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden space-y-0">
@@ -605,11 +653,13 @@ export default function AssetDetailPage({
                     </div>
 
                     {/* Right Column (Desktop): QR Label Section */}
-                    <div className="hidden lg:block space-y-6">
-                        <div className="sticky top-20">
-                            <QrLabelCard asset={asset} />
+                    {!isNewlyRegistered && (
+                        <div className="hidden lg:block space-y-6">
+                            <div className="sticky top-20">
+                                <QrLabelCard asset={asset} />
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Incident Reporting Modal */}

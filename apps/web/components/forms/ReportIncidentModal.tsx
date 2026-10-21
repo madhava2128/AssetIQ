@@ -105,7 +105,7 @@ export default function ReportIncidentModal({
             }
 
             // Success confirmation
-            const successMsg = `Incident reported for ${asset.name} (${asset.asset_tag}). Biomedical engineering can now see it.`;
+            const successMsg = `Incident reported for ${asset.name}.`;
             onSuccess(successMsg);
             onClose();
         } catch (err: any) {

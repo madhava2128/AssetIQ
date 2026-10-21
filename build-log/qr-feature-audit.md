@@ -124,30 +124,37 @@ CREATE TABLE IF NOT EXISTS breakdown_incidents (
 
 ---
 
-## 6. Public Base URL Configuration
+## 6. Public Production Base URL Configuration
 
-### Current State
-- `apps/web/.env.example` and root `.env.example` currently define Supabase, ML, and LLM endpoints, but have no public app address variable.
-- Hardcoded URLs must be avoided to ensure links function properly when scanned from mobile phone cameras and when packaged for Android.
-
-### Proposed Configuration
-- Define `NEXT_PUBLIC_APP_URL` in both `.env.example` and `apps/web/.env.example`:
-  ```bash
-  # Public App Base URL for QR Codes (e.g., https://assetiq.hospital.org or http://192.168.1.50:3000)
-  NEXT_PUBLIC_APP_URL=http://localhost:3000
-  ```
-- QR label generator reads `process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000')`.
-- If `NEXT_PUBLIC_APP_URL` is unset or resolves to `localhost` / `127.0.0.1`, display a prominent warning banner on the QR label panel:
-  > *"QR codes will not work on other devices until the public app address is set."*
+### Configuration & Normalization
+- **Confirmed Production Domain:** `https://assetiq-omega.vercel.app/` (normalized to `https://assetiq-omega.vercel.app`).
+- **Single Source of Truth:** `getAppBaseUrl()` in `apps/web/lib/scanner/index.ts` reads `process.env.NEXT_PUBLIC_APP_URL`, trims whitespace, and strips trailing slashes. No fallback to `localhost`, preview domains, or window origin is permitted for QR payloads.
+- **Strict Validation Rules (`isAppBaseUrlValid`):**
+  - Must be present and non-empty.
+  - Must not be a placeholder (e.g. `YOUR-VERCEL-DOMAIN`).
+  - Must use the `https://` protocol scheme.
+  - Must not be `localhost`, loopback (`127.0.0.1`, `0.0.0.0`, `::1`), link-local, or RFC 1918 private IPv4 addresses (`10.*`, `192.168.*`, `172.16-31.*`).
+  - Must contain at least a valid hostname with a dot.
+- **Invalid Address Warning State (Section 2 Requirement):**
+  - If the public app address is missing or invalid:
+    - Display plain warning banner: *"QR codes cannot be used yet. The public app address is not set up correctly."*
+    - Disable the **Download label** button (`disabled`, opacity reduced, cursor not allowed).
+    - Disable the **Print label** button (`disabled`).
+    - Suppress QR code rendering, replacing the code with a disabled placeholder. (This prevents anyone from printing non-functional physical stickers.)
+- **On-Screen Information:**
+  - Displays `"Opens: {full address}"` font-mono string beneath the QR code on screen only (omitted from print sticker).
+  - If viewing origin differs from the configured QR destination, displays: *"You are viewing the app from a different address than the one used in QR codes."*
+- **Documentation in `.env.example`:**
+  - Documented in both root `.env.example` and `apps/web/.env.example` with clear comments: must be the permanent production address, set in Vercel's Production environment variables, and requires a redeployment after changing because `NEXT_PUBLIC_` variables are compiled into static assets.
 
 ---
 
 ## 7. Audit Conclusion & Implementation Plan
-1. **Database:** Add migration for `reported_by` column on `breakdown_incidents`; update `mock-db.js`.
-2. **Dependencies:** Install `qrcode.react` in `apps/web`.
-3. **Scanner Layer:** Build `lib/scanner/index.ts` with `parseAssetQrPayload` and `ScannerService`.
-4. **Login Redirect:** Add safe `next` parameter support to `apps/web/app/login/page.tsx`.
-5. **Asset Detail Page (`/assets/[id]`):** Implement phone-friendly health summary, history, incident reporting form, and QR label download/print section.
-6. **QR Redirect Route (`/qr/[assetTag]`):** Redirect old asset tag URLs to `/assets/{assetId}`.
-7. **Equipment List ("Print Labels"):** Add batch QR label printing for asset managers on `/assets`.
-8. **Self-Verification:** Verify with two distinct assets, throwaway decoder script, auth redirection, editing immutability, role permissions, and mobile 360px layout.
+1. **Database:** Verified schema; confirmed `reported_by` column present on `breakdown_incidents`; confirmed mock-db and PostgreSQL synchronization.
+2. **Dependencies:** Confirmed `qrcode.react` is the only added runtime dependency; vector `QRCodeSVG` used with medium error correction (`level="M"`).
+3. **Scanner Layer:** Created `apps/web/lib/scanner/index.ts` with `getAppBaseUrl()`, `isAppBaseUrlValid()`, `getSafeNextPath()`, `isValidAssetId()`, `parseAssetQrPayload()`, and `ScannerService`.
+4. **Login Redirect:** Added safe relative `next` parameter support to `apps/web/app/login/page.tsx` with open-redirect rejection.
+5. **Asset Detail Page (`/assets/[id]`):** Implemented phone-friendly header, health summary, location & specifications, quick actions, maintenance history, incident history, and QR label download/print section. Configured `force-dynamic` rendering.
+6. **Registration Flow:** Updated `handleCreateOrUpdate` on `/assets` to automatically redirect newly registered equipment to `/assets/${id}?registered=true` showing the success banner and top QR label.
+7. **Equipment List Batch Printing:** Added A4 sheet sticker grid printing on `/assets` for authorized equipment managers.
+8. **Throwaway Verification:** Verified end-to-end with two distinct assets, throwaway `jsQR` decoder, editing immutability, role matrix checks, and 360px mobile usability.
