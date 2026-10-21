@@ -9,15 +9,16 @@ AssetIQ is an enterprise hospital asset management and surgical readiness system
 ```
 assetiq/
 ├── apps/
-│   └── web/                          # Next.js web application & API routes
+│   └── web/                          # Next.js 14 web application, QR tracking & API routes
 ├── services/
-│   └── ml/                           # Python ML service (predictive risk modeling)
+│   └── ml/                           # Python FastAPI ML service (predictive risk modeling)
 ├── supabase/
 │   ├── migrations/                   # Sequential schema migrations
 │   ├── seed/                         # Idempotent seed data & scripts
 │   └── policies/                     # Row Level Security (RLS) policies
-├── build-log/                        # Automated stage reports & verification logs
-├── docs/                             # Architecture & system documentation
+├── scripts/                          # Automated safeguard verification scripts
+├── build-log/                        # Automated stage reports, audits & verification logs
+├── docs/                             # Architecture & engineering rules documentation
 └── .github/
     └── workflows/                    # CI/CD workflows
 ```
