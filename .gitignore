@@ -5,6 +5,8 @@ node_modules/
 
 # Testing
 /coverage
+.pytest_cache/
+.ipynb_checkpoints/
 
 # Next.js build output
 .next/
@@ -13,19 +15,17 @@ build/
 dist/
 *.tsbuildinfo
 
+# Vercel
+.vercel/
+
 # Misc
 .DS_Store
+Thumbs.db
 *.pem
-
-# Debug logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+*.log
 
 # Local environment variables
-.env
-.env*.local
+.env*
 !.env.example
 
 # Python
@@ -39,7 +39,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.pytest_cache/
 
 # ML models output
 services/ml/src/models/*
@@ -50,3 +49,12 @@ services/ml/src/models/*
 .vscode/
 *.swp
 *.swo
+
+# Android build outputs
+android/build/
+android/app/build/
+.gradle/
+*.apk
+*.aab
+local.properties
+
