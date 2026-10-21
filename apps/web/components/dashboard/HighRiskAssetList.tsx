@@ -19,84 +19,72 @@ export default function HighRiskAssetList({ assets, canEdit, onUpdateAssetStatus
     );
 
     return (
-        <div className="instrument-panel p-5 font-mono">
-            <div className="flex items-center justify-between mb-4 border-b border-[var(--color-border)] pb-3">
-                <h3 className="text-base font-bold text-[var(--color-text-primary)] font-sans">
-                    High-Risk Asset Flagged List ({highRiskAssets.length})
-                </h3>
-                <span className="text-xs text-[var(--color-status-notready)] border border-[var(--color-status-notready)]/50 px-2.5 py-0.5 rounded font-bold">
-                    Action Required
+        <div className="bg-panel border border-border rounded p-4">
+            <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+                <div>
+                    <h3 className="text-section-heading text-text-primary">
+                        Equipment Needing Attention
+                    </h3>
+                    <p className="text-body text-text-secondary mt-0.5">
+                        Equipment currently undergoing maintenance, repair, or with overdue checks.
+                    </p>
+                </div>
+                <span className="text-caption text-status-notready-text bg-status-notready-bg border border-status-notready-solid px-2.5 py-1 rounded font-medium tabular-nums">
+                    {highRiskAssets.length} {highRiskAssets.length === 1 ? 'item' : 'items'}
                 </span>
             </div>
 
             {highRiskAssets.length === 0 ? (
-                <div className="p-8 text-center text-[var(--color-status-ready)] text-xs font-mono bg-[var(--color-status-ready-bg)] border border-[var(--color-status-ready)]/30 rounded">
-                    ● All active hospital assets are fully PM-compliant and operational.
+                <div className="p-6 text-center text-status-ready-text text-body bg-status-ready-bg border border-status-ready-solid rounded">
+                    All medical equipment is currently operational and up to date.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs font-mono">
-                        <thead className="text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                            <tr>
-                                <th className="p-2.5 font-bold">Asset Tag</th>
-                                <th className="p-2.5 font-bold font-sans">Asset Name</th>
-                                <th className="p-2.5 font-bold">Location</th>
-                                <th className="p-2.5 font-bold">Status</th>
-                                <th className="p-2.5 font-bold">PM / Risk Detail</th>
-                                {canEdit && <th className="p-2.5 text-right font-bold">Quick Action</th>}
+                    <table className="w-full text-left text-table border-collapse">
+                        <thead>
+                            <tr className="border-b border-border bg-subtle text-caption font-medium text-text-secondary">
+                                <th className="p-3">Asset tag</th>
+                                <th className="p-3">Equipment name</th>
+                                <th className="p-3">Location</th>
+                                <th className="p-3">Status</th>
+                                <th className="p-3">Detail</th>
+                                {canEdit && <th className="p-3 text-right">Action</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--color-border)]/40">
+                        <tbody className="divide-y divide-border">
                             {highRiskAssets.map(asset => {
-                                let riskBadge = '⚠️ PM Overdue';
-                                let badgeClass = 'badge-at-risk';
-
-                                const aDate = (asset.warranty_end_date || asset.warranty_expiration_date) ? new Date(asset.warranty_end_date || asset.warranty_expiration_date) : null;
+                                let riskBadge = 'PM overdue';
+                                let badgeClass = 'bg-status-atrisk-bg text-status-atrisk-text border-status-atrisk-solid';
 
                                 if (asset.status === 'UNDER_REPAIR') {
-                                    riskBadge = '🛑 Under Repair';
-                                    badgeClass = 'badge-not-ready';
+                                    riskBadge = 'Under repair';
+                                    badgeClass = 'bg-status-notready-bg text-status-notready-text border-status-notready-solid';
                                 } else if (asset.status !== 'AVAILABLE') {
-                                    riskBadge = `⚠️ ${formatEnumValue(asset.status)}`;
-                                    badgeClass = 'badge-at-risk';
-                                } else if (asset.is_pm_overdue) {
-                                    riskBadge = '⚠️ PM Overdue';
-                                    badgeClass = 'badge-at-risk';
-                                } else if ((aDate && aDate < new Date()) || asset.contract_status === 'Expired') {
-                                    riskBadge = '⚠️ Warranty Expired';
-                                    badgeClass = 'badge-at-risk';
+                                    riskBadge = formatEnumValue(asset.status);
+                                    badgeClass = 'bg-status-atrisk-bg text-status-atrisk-text border-status-atrisk-solid';
                                 }
 
-                                const warrantyText = (asset.warranty_vendor || asset.contract_vendor) ? `${asset.warranty_vendor || asset.contract_vendor} (${(asset.warranty_end_date || asset.warranty_expiration_date)?.split('T')[0] || 'Expired'})` : null;
-
                                 return (
-                                    <tr key={asset.id} className="hover:bg-[var(--color-bg-primary)]/50 transition-colors">
-                                        <td className="p-2.5 font-bold text-[var(--color-accent)]">{asset.asset_tag}</td>
-                                        <td className="p-2.5 text-[var(--color-text-primary)] font-sans font-semibold">{asset.name}</td>
-                                        <td className="p-2.5 text-[var(--color-text-muted)]">{asset.operating_room || 'Central Supply'}</td>
-                                        <td className="p-2.5">
-                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${badgeClass}`}>
-                                                {riskBadge}
+                                    <tr key={asset.id} className="hover:bg-subtle">
+                                        <td className="p-3 font-medium text-text-primary tabular-nums">{asset.asset_tag}</td>
+                                        <td className="p-3 font-medium text-text-primary">{asset.name}</td>
+                                        <td className="p-3 text-text-secondary">{asset.operating_room || asset.location || 'General'}</td>
+                                        <td className="p-3">
+                                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${badgeClass}`}>
+                                                {formatEnumValue(asset.status)}
                                             </span>
                                         </td>
-                                        <td className="p-2.5 text-[var(--color-text-muted)] text-[11px]">
-                                            {asset.is_pm_overdue && asset.next_pm_due_date ? `PM Due: ${asset.next_pm_due_date.split('T')[0]}` : (warrantyText || `Status: ${asset.status}`)}
+                                        <td className="p-3 text-caption text-text-secondary">
+                                            {riskBadge}
                                         </td>
                                         {canEdit && (
-                                            <td className="p-2.5 text-right">
-                                                {asset.status === 'UNDER_REPAIR' ? (
+                                            <td className="p-3 text-right">
+                                                {onUpdateAssetStatus && asset.status !== 'AVAILABLE' && (
                                                     <button
-                                                        onClick={() => onUpdateAssetStatus && onUpdateAssetStatus(asset.id, 'AVAILABLE')}
-                                                        className="px-2.5 py-1 bg-[var(--color-status-ready-bg)] text-[var(--color-status-ready)] border border-[var(--color-status-ready)] rounded text-[10px] font-bold hover:opacity-90 transition-opacity"
+                                                        onClick={() => onUpdateAssetStatus(asset.id, 'AVAILABLE')}
+                                                        className="border border-border-strong bg-panel hover:bg-subtle text-text-primary text-caption font-medium px-2.5 py-1 rounded"
                                                     >
-                                                        Mark Available
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => onUpdateAssetStatus && onUpdateAssetStatus(asset.id, 'UNDER_REPAIR')}
-                                                        className="px-2.5 py-1 bg-[var(--color-status-notready-bg)] text-[var(--color-status-notready)] border border-[var(--color-status-notready)] rounded text-[10px] font-bold hover:opacity-90 transition-opacity"
-                                                    >
-                                                        Set Under Repair
+                                                        Mark available
                                                     </button>
                                                 )}
                                             </td>
@@ -111,5 +99,3 @@ export default function HighRiskAssetList({ assets, canEdit, onUpdateAssetStatus
         </div>
     );
 }
-
-

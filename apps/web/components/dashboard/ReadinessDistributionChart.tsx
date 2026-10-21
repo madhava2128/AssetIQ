@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { TOKENS } from '@/lib/tokens';
 
 interface ReadinessDistributionChartProps {
     readyCount: number;
@@ -9,51 +10,57 @@ interface ReadinessDistributionChartProps {
     notReadyCount: number;
 }
 
-const COLORS = {
-    READY: '#4E9A82',     // Desaturated clinical green
-    AT_RISK: '#C98A3B',   // Desaturated clinical amber
-    NOT_READY: '#B44B4B'  // Desaturated clinical red
-};
-
 export default function ReadinessDistributionChart({
     readyCount,
     atRiskCount,
     notReadyCount
 }: ReadinessDistributionChartProps) {
     const data = [
-        { name: '● READY', value: readyCount, color: COLORS.READY },
-        { name: '▲ AT RISK', value: atRiskCount, color: COLORS.AT_RISK },
-        { name: '✕ NOT READY', value: notReadyCount, color: COLORS.NOT_READY }
+        { name: 'Ready', value: readyCount, color: TOKENS.status.ready.solid },
+        { name: 'At Risk', value: atRiskCount, color: TOKENS.status.atRisk.solid },
+        { name: 'Not Ready', value: notReadyCount, color: TOKENS.status.notReady.solid }
     ].filter(item => item.value > 0);
 
     const total = readyCount + atRiskCount + notReadyCount;
 
     return (
-        <div className="instrument-panel p-5 font-mono">
-            <div className="flex items-center justify-between mb-4 border-b border-[var(--color-border)] pb-3">
-                <h3 className="text-base font-bold text-[var(--color-text-primary)] font-sans">
-                    Surgery Readiness Distribution
-                </h3>
-                <span className="text-xs text-[var(--color-text-muted)] font-mono border border-[var(--color-border)] px-2.5 py-0.5 rounded">
-                    Total: {total}
-                </span>
+        <div className="bg-panel border border-border rounded p-4 flex flex-col justify-between">
+            <div>
+                <div className="flex items-center justify-between mb-1 pb-2 border-b border-border">
+                    <h3 className="text-body font-semibold text-text-primary">
+                        Surgery readiness share
+                    </h3>
+                    <span className="text-caption text-text-muted tabular-nums">
+                        {total} total surgeries
+                    </span>
+                </div>
+                <p className="text-caption text-text-secondary mb-3">
+                    Proportion of scheduled procedures cleared versus flagged.
+                </p>
             </div>
 
-            <div className="h-64 w-full">
+            <div className="h-60 w-full">
                 {data.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-[var(--color-text-muted)] text-xs font-mono">
-                        No surgery readiness data for selected date
+                    <div className="h-full flex items-center justify-center text-text-muted text-body">
+                        No surgeries scheduled for the selected date range.
                     </div>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
+                            <Legend
+                                verticalAlign="top"
+                                height={32}
+                                formatter={(value) => (
+                                    <span className="text-caption text-text-primary px-1 font-medium">{value}</span>
+                                )}
+                            />
                             <Pie
                                 data={data}
                                 cx="50%"
                                 cy="50%"
                                 innerRadius={55}
-                                outerRadius={85}
-                                paddingAngle={4}
+                                outerRadius={80}
+                                paddingAngle={3}
                                 dataKey="value"
                             >
                                 {data.map((entry, index) => (
@@ -62,26 +69,22 @@ export default function ReadinessDistributionChart({
                             </Pie>
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: '#16262C',
-                                    borderColor: 'rgba(143, 166, 163, 0.3)',
+                                    backgroundColor: TOKENS.neutrals.panel,
+                                    borderColor: TOKENS.neutrals.border,
                                     borderRadius: '4px',
-                                    color: '#E7EEEC',
-                                    fontFamily: 'JetBrains Mono, monospace',
-                                    fontSize: '12px'
+                                    color: TOKENS.neutrals.textPrimary,
+                                    fontSize: '13px'
                                 }}
-                            />
-                            <Legend
-                                verticalAlign="bottom"
-                                height={36}
-                                formatter={(value) => (
-                                    <span className="text-xs text-[var(--color-text-primary)] font-mono font-bold px-1">{value}</span>
-                                )}
+                                formatter={(value: any) => [`${value} surgeries`, 'Status']}
                             />
                         </PieChart>
                     </ResponsiveContainer>
                 )}
             </div>
+
+            <p className="text-caption text-text-muted pt-2 border-t border-border mt-2">
+                Green indicates procedures ready to proceed; amber and red require clinical or engineering resolution.
+            </p>
         </div>
     );
 }
-

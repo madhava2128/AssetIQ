@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { TOKENS } from '@/lib/tokens';
 
 interface PmComplianceChartProps {
     assets: any[];
@@ -33,62 +34,76 @@ export default function PmComplianceChart({ assets }: PmComplianceChartProps) {
     });
 
     const data = [
-        { name: 'PM Compliant', value: compliantCount, color: '#10b981' },
-        { name: 'Due Soon (In Grace)', value: dueSoonCount, color: '#f59e0b' },
-        { name: 'PM Overdue', value: overdueCount, color: '#ef4444' }
+        { name: 'Compliant', value: compliantCount, color: TOKENS.status.ready.solid },
+        { name: 'Due Soon', value: dueSoonCount, color: TOKENS.status.atRisk.solid },
+        { name: 'Overdue', value: overdueCount, color: TOKENS.status.notReady.solid }
     ].filter(d => d.value > 0);
 
+    const total = (assets || []).length;
+
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-                    Preventative Maintenance (PM) Compliance
-                </h3>
-                <span className="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-1 rounded">
-                    Total: {assets.length}
+        <div className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden flex flex-col justify-between">
+            <div className="panel-header-band flex items-center justify-between">
+                <div>
+                    <h3 className="text-body font-semibold text-text-primary">
+                        Preventive maintenance compliance
+                    </h3>
+                    <p className="text-caption text-text-secondary mt-0.5">
+                        Tracks compliance with scheduled inspection intervals.
+                    </p>
+                </div>
+                <span className="text-caption text-text-muted tabular-nums">
+                    {total} assets tracked
                 </span>
             </div>
 
-            <div className="h-64 w-full">
-                {data.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                        No PM data available
-                    </div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={50}
-                                outerRadius={80}
-                                paddingAngle={4}
-                                dataKey="value"
-                            >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: '#0f172a',
-                                    borderColor: '#334155',
-                                    borderRadius: '8px',
-                                    color: '#f8fafc'
-                                }}
-                            />
-                            <Legend
-                                verticalAlign="bottom"
-                                height={36}
-                                formatter={(value) => (
-                                    <span className="text-xs text-slate-300 font-medium px-1">{value}</span>
-                                )}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
-                )}
+            <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="h-60 w-full">
+                    {data.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-text-muted text-body">
+                            No maintenance records available.
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Legend
+                                    verticalAlign="top"
+                                    height={32}
+                                    formatter={(value) => (
+                                        <span className="text-caption text-text-primary px-1">{value}</span>
+                                    )}
+                                />
+                                <Pie
+                                    data={data}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={55}
+                                    outerRadius={80}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                >
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: TOKENS.panel.bg,
+                                        borderColor: TOKENS.panel.border,
+                                        borderRadius: '6px',
+                                        color: TOKENS.text.primary,
+                                        fontSize: '13px'
+                                    }}
+                                    formatter={(value: any) => [`${value} units`, 'Equipment']}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+
+                <p className="text-caption text-text-muted pt-2 border-t border-border mt-2">
+                    Overdue equipment requires inspection before assignment to surgery.
+                </p>
             </div>
         </div>
     );

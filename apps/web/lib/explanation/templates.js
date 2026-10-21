@@ -1,29 +1,64 @@
 // Templated Fallback Explanation Generator for AssetIQ (Stage 6)
-// Provides guaranteed, deterministic explanations and actionable recommendations based strictly on Stage 4/5 outputs.
+// Provides guaranteed, deterministic explanations and actionable recommendations in plain English.
+
+function formatEquipmentName(item) {
+    if (item.asset_name && !item.asset_name.toUpperCase().startsWith('AST-')) {
+        return item.asset_name;
+    }
+    const cat = item.required_category || 'medical asset';
+    return cat.toLowerCase().includes('unit') || cat.toLowerCase().includes('machine') || cat.toLowerCase().includes('scanner') || cat.toLowerCase().includes('system')
+        ? cat
+        : `${cat} unit`;
+}
+
+function formatStatusHeader(finalStatus) {
+    const statusMap = {
+        'NOT_READY': 'NOT READY',
+        'AT_RISK': 'AT RISK',
+        'READY': 'READY'
+    };
+    return `Surgery Readiness: ${statusMap[finalStatus] || finalStatus}`;
+}
+
+const RULE_PLAIN_EXPLANATIONS = {
+    RULE_1_STATUS_NOT_AVAILABLE: (item) =>
+        `The ${formatEquipmentName(item)} is currently unavailable.`,
+    RULE_2_STATUS_UNDER_REPAIR: (item) =>
+        `The ${formatEquipmentName(item)} is currently under repair.`,
+    RULE_3_QUANTITY_DEFICIT: (item) =>
+        `There is an equipment shortage for ${formatEquipmentName(item)} (required ${item.quantity_required}, available ${item.quantity_available}).`,
+    RULE_4_WARRANTY_CONTRACT_EXPIRED: (item) =>
+        `The ${formatEquipmentName(item)}'s service contract has expired.`,
+    RULE_5_PM_OVERDUE_BEYOND_GRACE: (item) =>
+        `Preventative maintenance for the ${formatEquipmentName(item)} is overdue beyond the allowable grace period.`,
+    RULE_6_CRITICAL_BREAKDOWN_LAST_30_DAYS: (item) =>
+        `The ${formatEquipmentName(item)} had a breakdown reported within the last 30 days and requires pre-op testing.`,
+    RULE_7_ALL_CHECKS_PASSED: (item) =>
+        `The ${formatEquipmentName(item)} is confirmed ready.`
+};
 
 const RULE_RECOMMENDATIONS = {
     RULE_1_STATUS_NOT_AVAILABLE: (item) =>
-        `Replace asset '${item.asset_name}' [${item.asset_tag}] (current status: '${item.status}') with an AVAILABLE '${item.required_category}' unit prior to surgical start.`,
+        `Assign an available ${formatEquipmentName(item)} unit prior to surgical start.`,
     RULE_2_STATUS_UNDER_REPAIR: (item) =>
-        `Asset '${item.asset_name}' [${item.asset_tag}] is UNDER_REPAIR. Transfer unit to biomedical engineering and substitute an operational '${item.required_category}' unit.`,
+        `Transfer the unit to biomedical engineering and substitute an operational ${formatEquipmentName(item)}.`,
     RULE_3_QUANTITY_DEFICIT: (item) =>
-        `Equipment deficit for category '${item.required_category}': required ${item.quantity_required}, available ${item.quantity_available}. Allocate ${item.quantity_required - item.quantity_available} additional unit(s).`,
+        `Allocate ${item.quantity_required - item.quantity_available} additional ${formatEquipmentName(item)} unit(s) to meet surgical requirements.`,
     RULE_4_WARRANTY_CONTRACT_EXPIRED: (item) =>
-        `Asset '${item.asset_name}' [${item.asset_tag}] warranty or service contract has expired. Request biomedical review or active vendor coverage.`,
+        `Biomedical engineering should renew or verify the ${formatEquipmentName(item)}'s service contract before the procedure, or arrange a backup unit if it cannot be resolved in time.`,
     RULE_5_PM_OVERDUE_BEYOND_GRACE: (item) =>
-        `Preventative maintenance for '${item.asset_name}' [${item.asset_tag}] is overdue beyond grace period. Perform emergency PM check or reassign PM-compliant unit.`,
+        `Perform an emergency PM inspection on the ${formatEquipmentName(item)} or reassign a PM-compliant unit.`,
     RULE_6_CRITICAL_BREAKDOWN_LAST_30_DAYS: (item) =>
-        `CRITICAL asset '${item.asset_name}' [${item.asset_tag}] had a breakdown reported within the last 30 days. Execute mandatory pre-op functional verification test.`,
+        `Execute a mandatory pre-op functional verification test on the ${formatEquipmentName(item)}.`,
     RULE_7_ALL_CHECKS_PASSED: (item) =>
-        `Asset '${item.asset_name}' [${item.asset_tag}] passed all deterministic safety checks.`
+        `No intervention required.`
 };
 
 /**
- * Generates a structured templated explanation and recommended actions list.
+ * Generates a structured templated explanation and recommended actions list in plain English.
  */
 function generateTemplatedExplanation(assessment) {
     const {
-        surgery_code = 'UNKNOWN',
         procedure_name = 'Procedure',
         operating_room = 'OR',
         final_status = 'UNKNOWN',
@@ -31,30 +66,59 @@ function generateTemplatedExplanation(assessment) {
         asset_assessments = []
     } = assessment;
 
+    const problemItems = asset_assessments.filter(a => a.status !== 'PASS' && a.status !== 'READY');
+    const passingItems = asset_assessments.filter(a => a.status === 'PASS' || a.status === 'READY');
+
+    const header = formatStatusHeader(final_status);
+
+    let riskText = '';
     const actionItems = [];
-    const detailLines = [];
 
-    asset_assessments.forEach((item, index) => {
-        const ruleId = item.rule_fired || 'RULE_7_ALL_CHECKS_PASSED';
-        const line = `Asset ${index + 1} [${item.required_category} - ${item.criticality}]: Status ${item.status} (${ruleId}) - ${item.explanation}`;
-        detailLines.push(line);
+    if (problemItems.length > 0) {
+        const problemSentences = problemItems.map(item => {
+            const ruleId = item.rule_fired || worst_rule_fired;
+            const expFn = RULE_PLAIN_EXPLANATIONS[ruleId] || RULE_PLAIN_EXPLANATIONS.RULE_1_STATUS_NOT_AVAILABLE;
+            return expFn(item);
+        });
 
-        if (item.status !== 'PASS' && item.status !== 'READY') {
+        let passingSummary = '';
+        if (passingItems.length > 0) {
+            const passingNames = passingItems.map(item => formatEquipmentName(item));
+            if (passingNames.length === 1) {
+                passingSummary = ` Everything else needed for this surgery — the ${passingNames[0]} — is confirmed ready.`;
+            } else if (passingNames.length > 1) {
+                const listStr = passingNames.slice(0, -1).join(', ') + ' and ' + passingNames[passingNames.length - 1];
+                passingSummary = ` Everything else needed for this surgery — the ${listStr} — is confirmed ready.`;
+            } else {
+                passingSummary = ' All other required equipment is confirmed ready.';
+            }
+        } else {
+            passingSummary = '';
+        }
+
+        riskText = `Primary Risk: ${problemSentences.join(' ')}${passingSummary}`;
+
+        problemItems.forEach(item => {
+            const ruleId = item.rule_fired || worst_rule_fired;
             const recFn = RULE_RECOMMENDATIONS[ruleId] || RULE_RECOMMENDATIONS.RULE_1_STATUS_NOT_AVAILABLE;
             actionItems.push(recFn(item));
+        });
+    } else {
+        const passingNames = passingItems.map(item => formatEquipmentName(item));
+        let equipStr = 'All required equipment';
+        if (passingNames.length > 0) {
+            equipStr = `All required equipment — including the ${passingNames.join(', ')}`;
         }
-    });
-
-    if (actionItems.length === 0) {
-        actionItems.push(`All required assets for procedure '${procedure_name}' (${surgery_code}) in Operating Room '${operating_room}' are fully verified and READY.`);
+        riskText = `Readiness Status: ${equipStr} — is fully verified, operational, and cleared for this procedure in Operating Room ${operating_room}.`;
+        actionItems.push(`Proceed with scheduled procedure in Operating Room ${operating_room} as planned.`);
     }
 
-    const statusSummary = `Surgery Readiness Determination: ${final_status}. Worst triggering rule: ${worst_rule_fired}.`;
-    const explanationText = `${statusSummary}\n\nAsset Evaluation Details:\n` + detailLines.join('\n');
+    const actionText = actionItems.join(' ');
+    const explanationText = `${header}\n\n${riskText}\n\nRecommended Action: ${actionText}`;
 
     return {
         surgery_id: assessment.surgery_id,
-        surgery_code,
+        surgery_code: assessment.surgery_code,
         procedure_name,
         operating_room,
         final_status,
@@ -68,5 +132,7 @@ function generateTemplatedExplanation(assessment) {
 
 module.exports = {
     generateTemplatedExplanation,
-    RULE_RECOMMENDATIONS
+    RULE_RECOMMENDATIONS,
+    RULE_PLAIN_EXPLANATIONS
 };
+

@@ -27,3 +27,10 @@ assetiq/
 - **Deterministic Rules & ML Separability**: Deterministic rules engine operates independently of ML inference service.
 - **Fail-Safe & Degraded Execution**: Unreachable or failing sub-services trigger loud alerts and degrade to safety-first fallbacks.
 - **Strict Verification**: Every stage includes automated test coverage before completion.
+
+## Engineering Rules & Safeguards
+All contributors and AI agents must adhere to the standing engineering rules documented in [docs/engineering-rules.md](file:///Users/madhava/Desktop/AssetIQ/docs/engineering-rules.md).
+- Automated end-to-end surgery scheduling flow and permission matrix verification: `npm run verify:surgery-flow`.
+- Writes must be atomic (`schedule_surgery_with_required_assets`) and confirmed by the database.
+- Shared read path with neutral "Not yet checked" fallback across all roles.
+

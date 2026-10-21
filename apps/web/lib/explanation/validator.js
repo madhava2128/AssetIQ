@@ -101,6 +101,24 @@ function validateExplanation(generatedText, recommendedActions, assessment) {
         }
     }
 
+    // 5. Readability Check: Un-translated internal rule codes (e.g. RULE_4_WARRANTY_CONTRACT_EXPIRED)
+    const ruleCodeMatches = fullText.match(/\bRULE_\d+(_[A-Z0-9_]+)?\b/g) || [];
+    for (const ruleCode of ruleCodeMatches) {
+        violations.push(`Readability violation: Generated text contains raw internal rule code '${ruleCode}' instead of plain English.`);
+    }
+
+    // 6. Readability Check: Bracketed internal asset tags or category labels (e.g. [AST-CARM-002], [ANESTHESIA_MACHINE - CRITICAL])
+    const bracketMatches = fullText.match(/\[[A-Z0-9_ -]+\]/gi) || [];
+    for (const bMatch of bracketMatches) {
+        violations.push(`Readability violation: Generated text contains bracketed internal label '${bMatch}'.`);
+    }
+
+    // 7. Readability Check: Raw status enum dumps (e.g. "Status PASS (", "Status AT_RISK (")
+    const rawStatusMatches = fullText.match(/\bStatus\s+(PASS|AT_RISK|NOT_READY|UNDER_REPAIR)\b/gi) || [];
+    for (const sMatch of rawStatusMatches) {
+        violations.push(`Readability violation: Generated text contains raw status dump '${sMatch}'.`);
+    }
+
     return {
         isValid: violations.length === 0,
         violations

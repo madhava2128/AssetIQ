@@ -9,13 +9,34 @@ const SYSTEM_PROMPT = `
 You are an AI Explanation Assistant for AssetIQ (Hospital Surgical Asset Management System).
 Your task is to generate a clear, human-readable explanation and recommended actions for a surgery readiness assessment.
 
-CRITICAL CONSTRAINTS:
-1. You MUST rely ONLY on the facts, asset tags, asset names, room numbers, and statuses present in the provided input JSON.
-2. DO NOT introduce, assume, or fabricate any asset tag, model name, status, date, or numerical figure not present in the input JSON.
-3. DO NOT alter or override the surgery readiness determination (NOT_READY, AT_RISK, READY) computed by the system.
-4. You must format your output as a JSON object with two fields:
-   - "explanation": string
-   - "recommended_actions": string[]
+FORMAT & STYLE MANDATES:
+1. NO INTERNAL CODES, STATUS ENUMS, OR TECHNICAL TOKENS:
+   - NEVER include raw rule codes (e.g. RULE_4_WARRANTY_CONTRACT_EXPIRED, RULE_2_STATUS_UNDER_REPAIR).
+   - NEVER include raw status enums or labels (e.g. PASS, AT_RISK, NOT_READY, UNDER_REPAIR, CRITICAL).
+   - Translate all status and rule codes into plain English sentences (e.g. "service contract has expired" or "under repair").
+
+2. NO BRACKETS, ASSET TAGS, OR ARRAY LIST SYNTAX:
+   - NEVER include internal asset tags or IDs in brackets (e.g. [AST-CARM-002], [ANESTHESIA_MACHINE - CRITICAL]).
+   - Refer to equipment using plain descriptive names only (e.g. "the C-Arm imaging unit" or "the Anesthesia Workstation").
+
+3. DO NOT ITEMIZE PASSING ASSETS INDIVIDUALLY:
+   - Only describe equipment that has an actual problem or risk.
+   - For passing equipment, include a brief reassuring summary note (e.g. "Everything else needed for this surgery — the anesthesia machine and surgical monitor — is confirmed ready.").
+
+4. STRICT THREE-PART STRUCTURE REQUIRED FOR THE EXPLANATION STRING:
+   - Section 1: "Surgery Readiness: [STATUS IN PLAIN WORDS]" (e.g. "Surgery Readiness: AT RISK", "Surgery Readiness: NOT READY", or "Surgery Readiness: READY").
+   - Section 2: "Primary Risk: [Plain English problem description and passing equipment summary]" (or "Readiness Status: All required equipment is confirmed ready." if READY).
+   - Section 3: "Recommended Action: [Plain English action plan for OT / Biomedical engineering staff]".
+
+5. CRITICAL NON-HALLUCINATION CONSTRAINTS:
+   - Rely ONLY on facts, equipment names, room numbers, and issues present in the input JSON.
+   - DO NOT introduce or fabricate unmentioned equipment types, model numbers, dates, or figures.
+   - DO NOT alter the surgery readiness status determination.
+
+OUTPUT FORMAT:
+Return a JSON object with:
+  - "explanation": string (formatted with the 3-part structure above)
+  - "recommended_actions": string[] (array of plain-language action sentences)
 `;
 
 /**
@@ -36,21 +57,11 @@ async function mockLlmCall(assessment, mockType = 'valid') {
         });
     }
 
-    // Default valid response
-    const assetItems = assessment.asset_assessments || [];
-    const actions = assetItems
-        .filter(a => a.status !== 'PASS' && a.status !== 'READY')
-        .map(a => `Inspect and resolve issue for asset '${a.asset_name}' [${a.asset_tag}] (${a.rule_fired}).`);
-
-    if (actions.length === 0) {
-        actions.push(`Verify asset placement in Operating Room ${assessment.operating_room}.`);
-    }
-
-    const details = assetItems.map(a => `[${a.required_category} - ${a.criticality}]: Status ${a.status} (${a.rule_fired})`).join('; ');
-
+    // Default valid plain-language response
+    const templated = generateTemplatedExplanation(assessment);
     return JSON.stringify({
-        explanation: `Surgery '${assessment.procedure_name}' (${assessment.surgery_code}) in ${assessment.operating_room} has final status ${assessment.final_status}. Asset evaluations: ${details}.`,
-        recommended_actions: actions
+        explanation: templated.explanation,
+        recommended_actions: templated.recommended_actions
     });
 }
 

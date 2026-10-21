@@ -11,72 +11,76 @@ interface SurgeriesTableProps {
 
 export default function SurgeriesTable({ surgeries, canEdit }: SurgeriesTableProps) {
     return (
-        <div className="instrument-panel p-5 font-mono">
-            <div className="flex items-center justify-between mb-4 border-b border-[var(--color-border)] pb-3">
-                <h3 className="text-base font-bold text-[var(--color-text-primary)] font-sans">
-                    Scheduled Surgeries & Readiness Manifest
-                </h3>
-                <span className="text-xs text-[var(--color-text-muted)] font-mono border border-[var(--color-border)] px-2.5 py-1 rounded">
-                    {surgeries.length} Surgeries Evaluated
+        <div className="bg-panel border border-border rounded p-4">
+            <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
+                <div>
+                    <h3 className="text-section-heading text-text-primary">
+                        Scheduled Surgeries
+                    </h3>
+                    <p className="text-body text-text-secondary mt-0.5">
+                        List of surgeries and readiness checks for the selected day.
+                    </p>
+                </div>
+                <span className="text-caption text-text-secondary bg-subtle border border-border px-2.5 py-1 rounded tabular-nums">
+                    {surgeries.length} {surgeries.length === 1 ? 'surgery' : 'surgeries'}
                 </span>
             </div>
 
             {surgeries.length === 0 ? (
-                <div className="p-8 text-center text-[var(--color-text-muted)] text-xs font-mono">
+                <div className="p-8 text-center text-text-muted text-body">
                     No surgeries scheduled for this date.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs font-mono">
-                        <thead className="text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-                            <tr>
-                                <th className="p-2.5 font-bold">Surgery Code</th>
-                                <th className="p-2.5 font-bold font-sans">Procedure Name</th>
-                                <th className="p-2.5 font-bold">OR Room</th>
-                                <th className="p-2.5 font-bold font-sans">Lead Surgeon</th>
-                                <th className="p-2.5 font-bold">Time Window</th>
-                                <th className="p-2.5 font-bold">Readiness</th>
-                                <th className="p-2.5 font-bold font-sans">Triggering Safety Assessment</th>
-                                <th className="p-2.5 text-right font-bold">Action</th>
+                    <table className="w-full text-left text-table border-collapse">
+                        <thead>
+                            <tr className="border-b border-border bg-subtle text-caption font-medium text-text-secondary">
+                                <th className="p-3">Surgery code</th>
+                                <th className="p-3">Procedure name</th>
+                                <th className="p-3">Operating room</th>
+                                <th className="p-3">Lead surgeon</th>
+                                <th className="p-3">Scheduled time</th>
+                                <th className="p-3">Readiness</th>
+                                <th className="p-3">Safety assessment</th>
+                                <th className="p-3 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[var(--color-border)]/40">
+                        <tbody className="divide-y divide-border">
                             {surgeries.map(surgery => {
-                                const status = (surgery.readiness_status || surgery.final_status || 'READY').toUpperCase();
+                                const rawStatus = surgery.readiness_status || surgery.final_status;
+                                const status = (rawStatus ? rawStatus : 'NOT_CHECKED').toUpperCase();
                                 const theme = getReadinessStatusTheme(status);
                                 const worstRule = surgery.worst_rule_fired;
-                                const ruleMessage = worstRule && worstRule !== 'RULE_7_ALL_CHECKS_PASSED' 
-                                    ? formatRuleMessage(worstRule) 
-                                    : 'All equipment rules verified and compliant';
+                                const ruleMessage = status === 'NOT_CHECKED'
+                                    ? 'Safety assessment not yet checked'
+                                    : (worstRule && worstRule !== 'RULE_7_ALL_CHECKS_PASSED'
+                                        ? formatRuleMessage(worstRule)
+                                        : 'All equipment rules verified and compliant');
 
                                 return (
-                                    <tr key={surgery.id} className="hover:bg-[var(--color-bg-primary)]/50 transition-colors">
-                                        <td className="p-2.5 font-bold text-[var(--color-accent)]">{surgery.surgery_code}</td>
-                                        <td className="p-2.5 text-[var(--color-text-primary)] font-sans font-semibold">{surgery.procedure_name}</td>
-                                        <td className="p-2.5 text-[var(--color-text-muted)]">{surgery.operating_room}</td>
-                                        <td className="p-2.5 text-[var(--color-text-muted)] font-sans">{surgery.surgeon_name}</td>
-                                        <td className="p-2.5 text-[var(--color-text-muted)] text-[11px]">
-                                            {surgery.scheduled_start_time ? surgery.scheduled_start_time.split('T')[1]?.substring(0, 5) : '08:00'} -{' '}
+                                    <tr key={surgery.id} className="hover:bg-subtle">
+                                        <td className="p-3 font-medium text-text-primary tabular-nums">{surgery.surgery_code}</td>
+                                        <td className="p-3 font-medium text-text-primary">{surgery.procedure_name}</td>
+                                        <td className="p-3 text-text-secondary">{surgery.operating_room}</td>
+                                        <td className="p-3 text-text-secondary">{surgery.surgeon_name}</td>
+                                        <td className="p-3 text-text-secondary tabular-nums">
+                                            {surgery.scheduled_start_time ? surgery.scheduled_start_time.split('T')[1]?.substring(0, 5) : '08:00'} –{' '}
                                             {surgery.scheduled_end_time ? surgery.scheduled_end_time.split('T')[1]?.substring(0, 5) : '10:00'}
                                         </td>
-                                        <td className="p-2.5">
-                                            <span className={`px-2 py-0.5 text-[10px] rounded font-bold ${theme.badgeClass}`}>
-                                                {theme.glyph} {theme.shortLabel}
+                                        <td className="p-3">
+                                            <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${theme.badgeClass}`}>
+                                                {theme.label}
                                             </span>
                                         </td>
-                                        <td className="p-2.5 text-[11px] font-sans">
-                                            {status === 'READY' ? (
-                                                <span className="text-[var(--color-status-ready)] font-semibold">✓ {ruleMessage}</span>
-                                            ) : (
-                                                <span className="text-[var(--color-status-atrisk)] font-semibold">⚠️ {ruleMessage}</span>
-                                            )}
+                                        <td className="p-3 text-caption text-text-secondary">
+                                            {ruleMessage}
                                         </td>
-                                        <td className="p-2.5 text-right">
+                                        <td className="p-3 text-right">
                                             <Link
                                                 href={`/surgeries/${surgery.id}`}
-                                                className="px-3 py-1 bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent)] rounded text-[11px] font-bold hover:opacity-90 transition-opacity inline-block"
+                                                className="text-accent hover:text-accent-hover text-caption font-medium underline"
                                             >
-                                                Inspect Detail
+                                                View details
                                             </Link>
                                         </td>
                                     </tr>
@@ -89,5 +93,3 @@ export default function SurgeriesTable({ surgeries, canEdit }: SurgeriesTablePro
         </div>
     );
 }
-
-

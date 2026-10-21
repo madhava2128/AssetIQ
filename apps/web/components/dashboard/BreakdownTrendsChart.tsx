@@ -1,17 +1,17 @@
 'use client';
 
 import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TOKENS } from '@/lib/tokens';
 
 interface BreakdownTrendsChartProps {
     breakdowns: any[];
 }
 
 export default function BreakdownTrendsChart({ breakdowns }: BreakdownTrendsChartProps) {
-    // Group breakdowns by month
+    // Group breakdowns by month for last 6 months
     const monthCounts: Record<string, number> = {};
 
-    // Initialize 6 months history
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -34,49 +34,71 @@ export default function BreakdownTrendsChart({ breakdowns }: BreakdownTrendsChar
         incidents: monthCounts[month]
     }));
 
+    const totalIncidents = (breakdowns || []).length;
+
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    Breakdown Incident Trends (6 Months)
-                </h3>
-                <span className="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-1 rounded">
-                    Total: {breakdowns.length}
+        <div className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden flex flex-col justify-between">
+            <div className="panel-header-band flex items-center justify-between">
+                <div>
+                    <h3 className="text-body font-semibold text-text-primary">
+                        Breakdowns per month, last 6 months
+                    </h3>
+                    <p className="text-caption text-text-secondary mt-0.5">
+                        Monthly trend of reported medical equipment failure incidents.
+                    </p>
+                </div>
+                <span className="text-caption text-text-muted tabular-nums">
+                    {totalIncidents} total incidents
                 </span>
             </div>
 
-            <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="breakdownGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                        <XAxis dataKey="month" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                        <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} allowDecimals={false} />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#0f172a',
-                                borderColor: '#334155',
-                                borderRadius: '8px',
-                                color: '#f8fafc'
-                            }}
-                            formatter={(value: any) => [`${value} Incidents`, 'Breakdowns']}
-                        />
-                        <Area
-                            type="monotone"
-                            dataKey="incidents"
-                            stroke="#f59e0b"
-                            strokeWidth={2}
-                            fillOpacity={1}
-                            fill="url(#breakdownGradient)"
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="h-60 w-full">
+                    {totalIncidents === 0 ? (
+                        <div className="h-full flex items-center justify-center text-text-muted text-body">
+                            No breakdown incidents recorded in the last 6 months.
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={data} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={TOKENS.chart.gridline} />
+                                <XAxis
+                                    dataKey="month"
+                                    stroke={TOKENS.text.secondary}
+                                    tick={{ fill: TOKENS.text.secondary, fontSize: 12 }}
+                                />
+                                <YAxis
+                                    stroke={TOKENS.text.secondary}
+                                    tick={{ fill: TOKENS.text.secondary, fontSize: 12 }}
+                                    allowDecimals={false}
+                                    unit=""
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: TOKENS.panel.bg,
+                                        borderColor: TOKENS.panel.border,
+                                        borderRadius: '6px',
+                                        color: TOKENS.text.primary,
+                                        fontSize: '13px'
+                                    }}
+                                    formatter={(value: any) => [`${value} incidents`, 'Breakdowns']}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="incidents"
+                                    stroke={TOKENS.chart.accent}
+                                    strokeWidth={2.5}
+                                    dot={{ fill: TOKENS.chart.accent, r: 4 }}
+                                    activeDot={{ r: 6 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+
+                <p className="text-caption text-text-muted pt-2 border-t border-border mt-2">
+                    A downward slope shows improving equipment reliability across surgical operating rooms.
+                </p>
             </div>
         </div>
     );

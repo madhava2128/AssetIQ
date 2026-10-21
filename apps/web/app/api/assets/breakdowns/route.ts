@@ -34,9 +34,11 @@ export async function POST(request: Request) {
             );
         }
 
-        // Automatic timestamped reported_at
+        // Automatic timestamped reported_at and reported_by tracking
+        const defaultReporter = auth.role === 'hospital_admin' ? 'Hospital Administrator' : 'Biomedical Engineer';
         const newIncident = await createBreakdownIncident({
             ...body,
+            reported_by: body.reported_by || defaultReporter,
             reported_at: new Date().toISOString()
         });
 

@@ -26,33 +26,34 @@ export default function UserAuthNav() {
         router.push('/login');
     };
 
+    const formatRoleLabel = (role: string | null) => {
+        if (!role) return '';
+        if (role === 'hospital_admin') return 'Hospital Administrator';
+        if (role === 'ot_admin') return 'OT Administrator';
+        if (role === 'biomedical_engineer') return 'Biomedical Engineer';
+        return role.replace(/_/g, ' ');
+    };
+
     return (
-        <div className="flex items-center gap-2 font-mono text-xs ml-2 border-l border-[var(--color-border)] pl-3">
+        <div className="flex items-center gap-2 sm:gap-3 text-caption border-l border-border pl-2 sm:pl-4 ml-1 sm:ml-2">
             {userRole ? (
                 <>
-                    <span className="hidden lg:inline-block text-[10px] text-[var(--color-text-muted)] font-semibold">
-                        Role:
-                    </span>
-                    <span className="text-[10px] font-bold text-[var(--color-accent)] bg-[var(--color-accent-bg)] border border-[var(--color-accent)] px-2 py-0.5 rounded uppercase">
-                        {userRole}
+                    <span className="text-text-secondary text-caption hidden sm:inline">
+                        {formatRoleLabel(userRole)}
                     </span>
                     <button
                         onClick={handleLogout}
-                        title="Sign Out of Session"
-                        className="px-2.5 py-1 rounded bg-[var(--color-bg-primary)] hover:bg-[var(--color-status-notready-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-status-notready)] border border-[var(--color-border)] hover:border-[var(--color-status-notready)] transition-colors text-[11px] font-bold flex items-center gap-1"
+                        className="text-text-primary hover:bg-subtle border border-border-strong bg-panel px-3 py-1 rounded text-caption font-medium transition-colors"
                     >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        <span>Logout</span>
+                        Sign out
                     </button>
                 </>
             ) : (
                 <Link
                     href="/login"
-                    className="px-3 py-1 rounded bg-[var(--color-accent)] text-[#0E1A1F] font-bold text-[11px] hover:opacity-90 transition-opacity"
+                    className="bg-accent hover:bg-accent-hover text-white px-3 py-1 rounded text-caption font-medium transition-colors"
                 >
-                    Sign In
+                    Sign in
                 </Link>
             )}
         </div>

@@ -40,14 +40,14 @@ describe('Stage 6 — AI Explanation Layer (LLM) Unit Tests', () => {
         explanation_text: 'Surgery evaluated as NOT_READY.'
     };
 
-    test('Acceptance Criterion 1: Validation step catches and rejects fabricated asset tags, names, or numbers', () => {
+    test('Acceptance Criterion 1: Validation step catches and rejects fabricated asset tags, names, numbers, and un-translated rule/bracket syntax', () => {
         // 1. Fabricated asset tag (AST-99999)
-        const fabricatedText = `Surgery SURG-CARDIAC-01 evaluated as NOT_READY due to AST-99999 being out of service.`;
+        const fabricatedText = `Surgery Readiness: NOT READY\n\nPrimary Risk: AST-99999 is broken.\n\nRecommended Action: Replace unit.`;
         const valRes1 = validateExplanation(fabricatedText, ['Replace AST-99999.'], mockAssessment);
 
         expect(valRes1.isValid).toBe(false);
         expect(valRes1.violations.length).toBeGreaterThan(0);
-        expect(valRes1.violations[0]).toContain('AST-99999');
+        expect(valRes1.violations.some(v => v.includes('AST-99999'))).toBe(true);
 
         // 2. Fabricated status contradiction (claims FULLY READY when final_status is NOT_READY)
         const statusContradiction = `Surgery SURG-CARDIAC-01 is FULLY READY for surgical start.`;
@@ -56,12 +56,19 @@ describe('Stage 6 — AI Explanation Layer (LLM) Unit Tests', () => {
         expect(valRes2.isValid).toBe(false);
         expect(valRes2.violations[0]).toContain('Status contradiction');
 
-        // 3. Fabricated numerical value (overdue by 999 days when not in payload)
-        const fabricatedNum = `Surgery SURG-CARDIAC-01 has asset AST-001-ANESTH overdue by 999 days.`;
-        const valRes3 = validateExplanation(fabricatedNum, [], mockAssessment);
+        // 3. Un-translated internal rule code (RULE_2_STATUS_UNDER_REPAIR)
+        const ruleCodeDump = `Surgery Readiness: NOT READY\n\nPrimary Risk: Rule RULE_2_STATUS_UNDER_REPAIR failed for Anesthesia Workstation.\n\nRecommended Action: Repair unit.`;
+        const valRes3 = validateExplanation(ruleCodeDump, [], mockAssessment);
 
         expect(valRes3.isValid).toBe(false);
-        expect(valRes3.violations[0]).toContain('999');
+        expect(valRes3.violations.some(v => v.includes('Readability violation'))).toBe(true);
+
+        // 4. Bracketed asset label syntax ([AST-001-ANESTH])
+        const bracketedDump = `Surgery Readiness: NOT READY\n\nPrimary Risk: The Anesthesia Workstation [AST-001-ANESTH] is down.\n\nRecommended Action: Substitute unit.`;
+        const valRes4 = validateExplanation(bracketedDump, [], mockAssessment);
+
+        expect(valRes4.isValid).toBe(false);
+        expect(valRes4.violations.some(v => v.includes('bracketed internal label'))).toBe(true);
     });
 
     test('Acceptance Criterion 2: Generator retries hallucinated content and falls back to templated non-LLM explanation when retries are exhausted', async () => {
@@ -78,40 +85,49 @@ describe('Stage 6 — AI Explanation Layer (LLM) Unit Tests', () => {
             llmProvider: alwaysHallucinateProvider
         });
 
-        // Verifies fallback execution
+        // Verifies fallback execution produces plain-language 3-part format
         expect(result.fallback_used).toBe(true);
         expect(result.is_llm_generated).toBe(false);
         expect(result.attempts).toBe(3);
-        expect(result.explanation).toContain('NOT_READY');
-        expect(result.explanation).toContain('RULE_2_STATUS_UNDER_REPAIR');
+        expect(result.explanation).toContain('Surgery Readiness: NOT READY');
+        expect(result.explanation).toContain('Primary Risk:');
+        expect(result.explanation).toContain('Recommended Action:');
+        expect(result.explanation).not.toMatch(/RULE_\w+/);
+        expect(result.explanation).not.toMatch(/\[.+\]/);
         expect(result.recommended_actions.length).toBeGreaterThan(0);
     });
 
-    test('Acceptance Criterion 3: Templated explanation always includes the specific triggering rule and actionable recommendations', () => {
+    test('Acceptance Criterion 3: Templated explanation meets plain-language standard with zero raw codes or bracket syntax', () => {
         const templated = generateTemplatedExplanation(mockAssessment);
 
         expect(templated.final_status).toBe('NOT_READY');
         expect(templated.worst_rule_fired).toBe('RULE_2_STATUS_UNDER_REPAIR');
-        expect(templated.explanation).toContain('RULE_2_STATUS_UNDER_REPAIR');
-        expect(templated.explanation).toContain('AST-001-ANESTH');
-        
-        // Recommended action must include specific guidance referencing asset tag & rule
+        expect(templated.explanation).toContain('Surgery Readiness: NOT READY');
+        expect(templated.explanation).toContain('Primary Risk: The Anesthesia Workstation is currently under repair.');
+        expect(templated.explanation).toContain('Everything else needed for this surgery — the Ventilator Pro — is confirmed ready.');
+        expect(templated.explanation).toContain('Recommended Action:');
+
+        // Plain language negative checks
+        expect(templated.explanation).not.toMatch(/RULE_\w+/);
+        expect(templated.explanation).not.toMatch(/\[.+\]/);
+        expect(templated.explanation).not.toContain('Status PASS');
+
+        // Recommended action check
         expect(templated.recommended_actions.length).toBeGreaterThan(0);
-        expect(templated.recommended_actions[0]).toContain('AST-001-ANESTH');
-        expect(templated.recommended_actions[0]).toContain('UNDER_REPAIR');
+        expect(templated.recommended_actions[0]).toContain('Transfer the unit to biomedical engineering');
     });
 
-    test('Valid LLM output passes post-generation validation cleanly', async () => {
-        const validProvider = async () => {
+    test('Valid LLM output in plain language passes post-generation validation cleanly', async () => {
+        const validPlainLanguageProvider = async () => {
             return JSON.stringify({
-                explanation: `Surgery SURG-CARDIAC-01 in OT-1 is NOT_READY. Asset AST-001-ANESTH is UNDER_REPAIR (RULE_2_STATUS_UNDER_REPAIR).`,
-                recommended_actions: [`Replace AST-001-ANESTH with an operational Anesthesia Machine in OT-1.`]
+                explanation: `Surgery Readiness: NOT READY\n\nPrimary Risk: The Anesthesia Workstation is currently under repair. Everything else needed for this surgery — the Ventilator Pro — is confirmed ready.\n\nRecommended Action: Biomedical engineering should transfer the unit to repair and substitute an operational Anesthesia Workstation in OT-1.`,
+                recommended_actions: [`Transfer the Anesthesia Workstation to biomedical engineering and substitute an operational unit in OT-1.`]
             });
         };
 
         const result = await generateExplanation(mockAssessment, {
             maxAttempts: 3,
-            llmProvider: validProvider
+            llmProvider: validPlainLanguageProvider
         });
 
         expect(result.is_llm_generated).toBe(true);
@@ -130,3 +146,4 @@ describe('Stage 6 — AI Explanation Layer (LLM) Unit Tests', () => {
         expect(assessmentCopy.final_status).toBe(originalStatus);
     });
 });
+

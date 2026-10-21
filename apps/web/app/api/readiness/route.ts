@@ -16,6 +16,19 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: `Surgery with ID ${surgeryId} not found` }, { status: 404 });
         }
 
+        // If surgery is explicitly not checked yet (e.g. scheduled in advance), return NOT_CHECKED
+        if (surgery.readiness_checked === false) {
+            return NextResponse.json({
+                success: true,
+                assessment: {
+                    surgery_id: surgery.id,
+                    final_status: 'NOT_CHECKED',
+                    worst_rule_fired: null,
+                    asset_assessments: []
+                }
+            });
+        }
+
         const config = await mockDb.getReadinessConfig();
         const assetAssessments = [];
 

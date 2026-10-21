@@ -18,7 +18,7 @@ export default function BreakdownForm({ assets, incidentToResolve, onSubmit, onC
         failure_type: incidentToResolve?.failure_type || 'MECHANICAL',
         description: incidentToResolve?.description || '',
         resolution_notes: incidentToResolve?.resolution_notes || '',
-        downtime_hours: incidentToResolve?.downtime_hours || 0,
+        downtime_days: incidentToResolve?.downtime_hours ? Number((incidentToResolve.downtime_hours / 24).toFixed(1)) : 0,
         is_resolving: isResolveMode
     });
 
@@ -42,133 +42,137 @@ export default function BreakdownForm({ assets, incidentToResolve, onSubmit, onC
 
         onSubmit({
             ...formData,
+            downtime_hours: Math.round((formData.downtime_days || 0) * 24),
             id: incidentToResolve?.id
         });
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-900 text-slate-100 rounded-lg border border-slate-700">
-            <h3 className={`text-lg font-semibold ${isResolveMode ? 'text-amber-400' : 'text-rose-400'}`}>
-                {isResolveMode ? 'Resolve Breakdown Incident' : 'Report Equipment Breakdown Incident'}
-            </h3>
+        <form onSubmit={handleSubmit} className="overflow-hidden bg-panel text-text-primary rounded-[6px] border border-border">
+            <div className="panel-header-band px-5 py-3 border-b border-border">
+                <h3 className="text-base font-semibold text-text-primary">
+                    {isResolveMode ? 'Resolve Breakdown Incident' : 'Report Equipment Breakdown'}
+                </h3>
+            </div>
 
-            {error && (
-                <div className="p-3 bg-rose-900/50 border border-rose-500 text-rose-200 text-sm rounded">
-                    ⚠️ {error}
-                </div>
-            )}
+            <div className="p-5 space-y-4">
+                {error && (
+                    <div className="p-3 bg-status-notready-bg border border-status-notready-solid text-status-notready-text text-sm rounded-[4px]">
+                        {error}
+                    </div>
+                )}
 
             {!isResolveMode && (
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Affected Asset *</label>
+                    <label className="block text-sm font-medium text-text-primary mb-1">Affected equipment *</label>
                     <select
                         name="asset_id"
                         value={formData.asset_id}
                         onChange={(e) => setFormData({ ...formData, asset_id: e.target.value })}
                         required
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                     >
                         <option value="">Select affected equipment...</option>
                         {assets.map(asset => (
                             <option key={asset.id} value={asset.id}>
-                                [{asset.asset_tag}] {asset.name}
+                                {asset.name} ({asset.asset_tag})
                             </option>
                         ))}
                     </select>
                 </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Severity *</label>
+                    <label className="block text-sm font-medium text-text-primary mb-1">Severity *</label>
                     <select
                         name="severity"
                         value={formData.severity}
                         onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
                         required
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                     >
-                        <option value="CRITICAL">CRITICAL (Immediate OR stop)</option>
-                        <option value="HIGH">HIGH (Major malfunction)</option>
-                        <option value="MEDIUM">MEDIUM (Partial failure)</option>
-                        <option value="LOW">LOW (Minor glitch)</option>
+                        <option value="CRITICAL">Critical (Immediate stop)</option>
+                        <option value="HIGH">High (Major malfunction)</option>
+                        <option value="MEDIUM">Medium (Partial failure)</option>
+                        <option value="LOW">Low (Minor glitch)</option>
                     </select>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Failure Type *</label>
+                    <label className="block text-sm font-medium text-text-primary mb-1">Failure type *</label>
                     <select
                         name="failure_type"
                         value={formData.failure_type}
                         onChange={(e) => setFormData({ ...formData, failure_type: e.target.value })}
                         required
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                     >
-                        <option value="MECHANICAL">MECHANICAL</option>
-                        <option value="ELECTRICAL">ELECTRICAL</option>
-                        <option value="SOFTWARE">SOFTWARE / FIRMWARE</option>
-                        <option value="CALIBRATION">CALIBRATION FAULT</option>
-                        <option value="SENSOR">SENSOR / PROBE</option>
-                        <option value="OTHER">OTHER</option>
+                        <option value="MECHANICAL">Mechanical Failure</option>
+                        <option value="ELECTRICAL">Electrical / Power Issue</option>
+                        <option value="SOFTWARE">Software / Firmware Glitch</option>
+                        <option value="CALIBRATION">Calibration Drift</option>
+                        <option value="USER_ERROR">Operational / User Error</option>
                     </select>
                 </div>
             </div>
 
             <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Breakdown Description *</label>
+                <label className="block text-sm font-medium text-text-primary mb-1">Incident description</label>
                 <textarea
                     name="description"
+                    rows={3}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                    rows={2}
-                    placeholder="Describe exact error code or behavior during procedure..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-rose-500"
+                    placeholder="Describe what occurred, any error codes displayed..."
+                    className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                 />
             </div>
 
             {isResolveMode && (
-                <>
+                <div className="space-y-4 pt-2 border-t border-border">
                     <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Resolution Notes & Technician Action</label>
+                        <label className="block text-sm font-medium text-text-primary mb-1">Resolution notes *</label>
                         <textarea
                             name="resolution_notes"
+                            rows={3}
                             value={formData.resolution_notes}
                             onChange={(e) => setFormData({ ...formData, resolution_notes: e.target.value })}
-                            rows={2}
-                            placeholder="Describe how the breakdown was resolved..."
-                            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                            placeholder="Describe repairs completed and verification performed..."
+                            required
+                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-slate-400 mb-1">Total Downtime (Hours)</label>
+                        <label className="block text-sm font-medium text-text-primary mb-1">Total downtime (days)</label>
                         <input
                             type="number"
-                            name="downtime_hours"
-                            value={formData.downtime_hours}
-                            onChange={(e) => setFormData({ ...formData, downtime_hours: parseFloat(e.target.value) || 0 })}
-                            placeholder="e.g. 24"
-                            className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                            step="0.1"
+                            name="downtime_days"
+                            value={formData.downtime_days}
+                            onChange={(e) => setFormData({ ...formData, downtime_days: Number(e.target.value) })}
+                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                         />
                     </div>
-                </>
+                </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-sm font-medium"
-                >
-                    Cancel
-                </button>
-                <button
-                    type="submit"
-                    className={`px-4 py-2 text-white rounded text-sm font-medium shadow-md ${isResolveMode ? 'bg-amber-600 hover:bg-amber-500' : 'bg-rose-600 hover:bg-rose-500'}`}
-                >
-                    {isResolveMode ? 'Resolve & Close Incident' : 'Report Incident (Auto Timestamp)'}
-                </button>
+                <div className="flex justify-end gap-3 pt-3 border-t border-border">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="px-4 py-2 border border-border-strong bg-panel hover:bg-table-hover text-text-primary rounded-[4px] text-sm font-medium transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-[4px] text-sm font-medium transition-colors"
+                    >
+                        {isResolveMode ? 'Resolve breakdown' : 'Report breakdown'}
+                    </button>
+                </div>
             </div>
         </form>
     );

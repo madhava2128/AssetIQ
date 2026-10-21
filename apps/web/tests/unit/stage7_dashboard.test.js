@@ -43,7 +43,7 @@ describe('Stage 7 — Dashboard (Next.js + Recharts) Unit Tests', () => {
         const bioRole = getRoleFromToken(bioToken);
         expect(bioRole).toBe('biomedical_engineer');
         expect(canUserEdit(bioRole)).toBe(true);
-        expect(getLandingUrlForRole(bioRole)).toBe('/assets');
+        expect(getLandingUrlForRole(bioRole)).toBe('/engineer-dashboard');
 
         // 2. Hospital Admin Role (Full Admin Token)
         const adminToken = MOCK_AUTH_TOKENS.hospital_admin;

@@ -2,64 +2,114 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TOKENS } from '@/lib/tokens';
 
 interface DowntimeChartProps {
     breakdowns: any[];
+    assets?: any[];
 }
 
-export default function DowntimeChart({ breakdowns }: DowntimeChartProps) {
-    const severityDowntime: Record<string, number> = {
-        CRITICAL: 0,
-        HIGH: 0,
-        MEDIUM: 0,
-        LOW: 0
-    };
+export default function DowntimeChart({ breakdowns, assets = [] }: DowntimeChartProps) {
+    const categoryDowntimeHours: Record<string, number> = {};
 
-    (breakdowns || []).forEach(b => {
-        const sev = (b.severity || 'MEDIUM').toUpperCase();
-        const hours = Number(b.downtime_hours || 0);
-        if (severityDowntime[sev] !== undefined) {
-            severityDowntime[sev] += hours;
-        } else {
-            severityDowntime[sev] = hours;
+    // Build asset ID to category map
+    const assetCategoryMap: Record<string, string> = {};
+    (assets || []).forEach(a => {
+        if (a.id) {
+            let cat = a.category ? a.category.replace(/_/g, ' ') : 'General Medical';
+            cat = cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+            assetCategoryMap[a.id] = cat;
         }
     });
 
-    const data = Object.keys(severityDowntime).map(sev => ({
-        severity: sev,
-        downtimeHours: Math.round(severityDowntime[sev] * 10) / 10
-    }));
+    (breakdowns || []).forEach(b => {
+        const cat = (b.asset_id && assetCategoryMap[b.asset_id])
+            ? assetCategoryMap[b.asset_id]
+            : (b.severity ? `${b.severity} Priority` : 'General Equipment');
+
+        const hours = Number(b.downtime_hours || 0);
+        if (!categoryDowntimeHours[cat]) {
+            categoryDowntimeHours[cat] = 0;
+        }
+        categoryDowntimeHours[cat] += hours;
+    });
+
+    const data = Object.keys(categoryDowntimeHours)
+        .map(cat => ({
+            category: cat,
+            shortCategory: cat.length > 18 ? cat.substring(0, 16) + '...' : cat,
+            downtimeDays: Number((categoryDowntimeHours[cat] / 24).toFixed(1))
+        }))
+        .sort((a, b) => b.downtimeDays - a.downtimeDays)
+        .slice(0, 6);
+
+    const totalDays = Number((data.reduce((a, b) => a + b.downtimeDays, 0)).toFixed(1));
 
     return (
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-semibold text-slate-100 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                    Downtime Analysis (Hours by Severity)
-                </h3>
-                <span className="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-1 rounded">
-                    Total: {data.reduce((a, b) => a + b.downtimeHours, 0)} hrs
+        <div className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden flex flex-col justify-between">
+            <div className="panel-header-band flex items-center justify-between">
+                <div>
+                    <h3 className="text-body font-semibold text-text-primary">
+                        Downtime in days by equipment category
+                    </h3>
+                    <p className="text-caption text-text-secondary mt-0.5">
+                        Out-of-service days recorded across medical equipment types.
+                    </p>
+                </div>
+                <span className="text-caption text-text-muted tabular-nums">
+                    {totalDays} days total
                 </span>
             </div>
 
-            <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                        <XAxis dataKey="severity" stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                        <YAxis stroke="#64748b" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#0f172a',
-                                borderColor: '#334155',
-                                borderRadius: '8px',
-                                color: '#f8fafc'
-                            }}
-                            formatter={(value: any) => [`${value} Hours`, 'Cumulative Downtime']}
-                        />
-                        <Bar dataKey="downtimeHours" fill="#f97316" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="h-60 w-full">
+                    {data.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-text-muted text-body">
+                            No equipment downtime recorded.
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                layout="vertical"
+                                data={data}
+                                margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={TOKENS.chart.gridline} />
+                                <XAxis
+                                    type="number"
+                                    stroke={TOKENS.text.secondary}
+                                    tick={{ fill: TOKENS.text.secondary, fontSize: 11 }}
+                                    unit=" d"
+                                />
+                                <YAxis
+                                    type="category"
+                                    dataKey="shortCategory"
+                                    stroke={TOKENS.text.secondary}
+                                    tick={{ fill: TOKENS.text.secondary, fontSize: 11 }}
+                                    width={120}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: TOKENS.panel.bg,
+                                        borderColor: TOKENS.panel.border,
+                                        borderRadius: '6px',
+                                        color: TOKENS.text.primary,
+                                        fontSize: '13px'
+                                    }}
+                                    formatter={(value: any, name: any, item: any) => [
+                                        `${value} days out of service`,
+                                        item.payload.category
+                                    ]}
+                                />
+                                <Bar dataKey="downtimeDays" fill={TOKENS.chart.accent} radius={[0, 2, 2, 0]} barSize={14} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+
+                <p className="text-caption text-text-muted pt-2 border-t border-border mt-2">
+                    Longer bars mean more days that equipment was unavailable for surgical use.
+                </p>
             </div>
         </div>
     );

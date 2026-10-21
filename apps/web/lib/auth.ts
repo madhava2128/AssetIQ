@@ -28,7 +28,7 @@ export function getLandingUrlForRole(role: UserRole): string {
         case 'ot_admin':
             return '/surgeries';
         case 'biomedical_engineer':
-            return '/assets';
+            return '/engineer-dashboard';
         default:
             return '/login?error=account_not_configured';
     }

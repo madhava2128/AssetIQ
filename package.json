@@ -6,7 +6,8 @@
     "dev": "npm --prefix apps/web run dev",
     "build": "npm --prefix apps/web run build",
     "start": "npm --prefix apps/web start",
-    "test": "npm --prefix apps/web test",
+    "test": "npm --prefix apps/web test && node scripts/verify-surgery-flow.js",
+    "verify:surgery-flow": "node scripts/verify-surgery-flow.js",
     "dev:ml": "cd services/ml && uvicorn src.main:app --reload --port 8000"
   }
 }

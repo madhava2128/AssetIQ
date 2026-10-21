@@ -9,13 +9,13 @@ export function formatRuleMessage(ruleCode: string | null | undefined): string {
         case 'RULE_1_STATUS_NOT_AVAILABLE':
             return 'Required equipment is currently under maintenance or repair';
         case 'RULE_2_MAINTENANCE_OVERDUE':
-            return 'Assigned equipment has overdue preventive maintenance (PM)';
+            return 'Assigned equipment has overdue preventive maintenance';
         case 'RULE_3_TYPE_MISMATCH':
             return 'Assigned equipment type does not match surgical requirement';
         case 'RULE_4_SCHEDULE_CONFLICT':
-            return 'Assigned equipment is double-booked for another surgery at this time';
+            return 'Assigned equipment is scheduled for another surgery at this time';
         case 'RULE_5_LOCATION_MISMATCH':
-            return 'Assigned equipment is located in a different operating suite';
+            return 'Assigned equipment is located in a different operating room';
         default:
             return ruleCode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
     }
@@ -54,9 +54,9 @@ export function formatEnumValue(value: string | null | undefined): string {
         'RETIRED': 'Retired',
 
         // Criticality
-        'CRITICAL': 'Critical Level 1',
-        'IMPORTANT': 'Important Level 2',
-        'ROUTINE': 'Routine Level 3',
+        'CRITICAL': 'Critical',
+        'IMPORTANT': 'Important',
+        'ROUTINE': 'Routine',
     };
 
     if (map[value]) return map[value];
@@ -68,8 +68,24 @@ export function formatEnumValue(value: string | null | undefined): string {
         .join(' ');
 }
 
+export function formatCurrencyINR(amount: number | null | undefined): string {
+    const val = Number(amount || 0);
+    return `₹${val.toLocaleString('en-IN')}`;
+}
+
+export function formatExecutiveCurrencyINR(amount: number | null | undefined): string {
+    const val = Number(amount || 0);
+    if (val >= 10000000) {
+        return `₹${(val / 10000000).toFixed(2)} Crore`;
+    }
+    if (val >= 100000) {
+        return `₹${(val / 100000).toFixed(1)} Lakhs`;
+    }
+    return `₹${val.toLocaleString('en-IN')}`;
+}
+
 export interface ReadinessStatusTheme {
-    status: 'READY' | 'AT_RISK' | 'NOT_READY';
+    status: 'READY' | 'AT_RISK' | 'NOT_READY' | 'NOT_CHECKED';
     label: string;
     shortLabel: string;
     glyph: string;
@@ -80,39 +96,51 @@ export interface ReadinessStatusTheme {
 }
 
 export function getReadinessStatusTheme(status: string | null | undefined): ReadinessStatusTheme {
-    const s = (status || 'READY').toUpperCase();
+    const s = (status || '').toUpperCase();
     if (s === 'NOT_READY') {
         return {
             status: 'NOT_READY',
-            label: 'NOT READY — Critical Blocker',
-            shortLabel: 'NOT READY',
-            glyph: '🛑',
-            badgeClass: 'bg-rose-950/70 text-rose-300 border border-rose-600',
-            bannerClass: 'bg-rose-950/40 border-rose-500/60 text-rose-200',
-            borderClass: 'border-rose-600',
-            textClass: 'text-rose-400',
+            label: 'Not Ready',
+            shortLabel: 'Not Ready',
+            glyph: '',
+            badgeClass: 'bg-status-notready-bg text-status-notready-text border border-status-notready-solid',
+            bannerClass: 'bg-status-notready-bg border border-status-notready-solid text-status-notready-text',
+            borderClass: 'border-status-notready-solid',
+            textClass: 'text-status-notready-text',
         };
     }
     if (s === 'AT_RISK') {
         return {
             status: 'AT_RISK',
-            label: 'AT RISK — PM/Inspection Due',
-            shortLabel: 'AT RISK',
-            glyph: '⚠️',
-            badgeClass: 'bg-amber-950/70 text-amber-300 border border-amber-600',
-            bannerClass: 'bg-amber-950/40 border-amber-500/60 text-amber-200',
-            borderClass: 'border-amber-600',
-            textClass: 'text-amber-400',
+            label: 'At Risk',
+            shortLabel: 'At Risk',
+            glyph: '',
+            badgeClass: 'bg-status-atrisk-bg text-status-atrisk-text border border-status-atrisk-solid',
+            bannerClass: 'bg-status-atrisk-bg border border-status-atrisk-solid text-status-atrisk-text',
+            borderClass: 'border-status-atrisk-solid',
+            textClass: 'text-status-atrisk-text',
+        };
+    }
+    if (s === 'NOT_CHECKED' || s === 'NOT_YET_CHECKED' || s === 'UNCHECKED' || s === 'PENDING') {
+        return {
+            status: 'NOT_CHECKED',
+            label: 'Not yet checked',
+            shortLabel: 'Not yet checked',
+            glyph: '',
+            badgeClass: 'bg-status-neutral-bg text-status-neutral-text border border-status-neutral-solid',
+            bannerClass: 'bg-status-neutral-bg border border-status-neutral-solid text-status-neutral-text',
+            borderClass: 'border-status-neutral-solid',
+            textClass: 'text-status-neutral-text',
         };
     }
     return {
         status: 'READY',
-        label: 'READY — Cleared for Surgery',
-        shortLabel: 'READY',
-        glyph: '✓',
-        badgeClass: 'bg-emerald-950/70 text-emerald-300 border border-emerald-600',
-        bannerClass: 'bg-emerald-950/40 border-emerald-500/60 text-emerald-200',
-        borderClass: 'border-emerald-600',
-        textClass: 'text-emerald-400',
+        label: 'Ready',
+        shortLabel: 'Ready',
+        glyph: '',
+        badgeClass: 'bg-status-ready-bg text-status-ready-text border border-status-ready-solid',
+        bannerClass: 'bg-status-ready-bg border border-status-ready-solid text-status-ready-text',
+        borderClass: 'border-status-ready-solid',
+        textClass: 'text-status-ready-text',
     };
 }

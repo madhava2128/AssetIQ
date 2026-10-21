@@ -1,263 +1,571 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { checkPreSaveConflicts } from '@/lib/equipment-allocation';
+import { formatEnumValue } from '@/lib/formatters';
+
+interface EquipmentItem {
+    required_category: string;
+    quantity: number;
+    criticality: 'CRITICAL' | 'IMPORTANT' | 'STANDARD';
+    assigned_asset_id?: string | null;
+}
 
 interface SurgeryFormProps {
     initialData?: any;
+    allSurgeries?: any[];
+    allAssets?: any[];
+    prefilledDate?: string;
+    prefilledTime?: string;
+    prefilledOr?: string;
     onSubmit: (data: any) => Promise<void> | void;
     onCancel: () => void;
     externalError?: string | null;
 }
 
-export default function SurgeryForm({ initialData, onSubmit, onCancel, externalError }: SurgeryFormProps) {
+const DEFAULT_TEMPLATES: Record<string, EquipmentItem[]> = {
+    LAPAROSCOPIC: [
+        { required_category: 'ANESTHESIA_MACHINE', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'LAPAROSCOPIC_TOWER', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'ELECTROSURGICAL_UNIT', quantity: 1, criticality: 'IMPORTANT' },
+        { required_category: 'SURGICAL_MONITOR', quantity: 1, criticality: 'CRITICAL' }
+    ],
+    CARDIAC: [
+        { required_category: 'ANESTHESIA_MACHINE', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'CARM_FLUOROSCOPY', quantity: 1, criticality: 'IMPORTANT' },
+        { required_category: 'ELECTROSURGICAL_UNIT', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'SURGICAL_MONITOR', quantity: 2, criticality: 'CRITICAL' }
+    ],
+    ORTHOPEDIC: [
+        { required_category: 'ANESTHESIA_MACHINE', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'CARM_FLUOROSCOPY', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'ELECTROSURGICAL_UNIT', quantity: 1, criticality: 'IMPORTANT' },
+        { required_category: 'SURGICAL_MONITOR', quantity: 1, criticality: 'STANDARD' }
+    ],
+    NEUROSURGERY: [
+        { required_category: 'ANESTHESIA_MACHINE', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'CARM_FLUOROSCOPY', quantity: 1, criticality: 'IMPORTANT' },
+        { required_category: 'ELECTROSURGICAL_UNIT', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'SURGICAL_MONITOR', quantity: 2, criticality: 'CRITICAL' }
+    ],
+    GENERAL_SURGERY: [
+        { required_category: 'ANESTHESIA_MACHINE', quantity: 1, criticality: 'CRITICAL' },
+        { required_category: 'ELECTROSURGICAL_UNIT', quantity: 1, criticality: 'IMPORTANT' },
+        { required_category: 'SURGICAL_MONITOR', quantity: 1, criticality: 'CRITICAL' }
+    ]
+};
+
+const AVAILABLE_CATEGORIES = [
+    'ANESTHESIA_MACHINE',
+    'LAPAROSCOPIC_TOWER',
+    'CARM_FLUOROSCOPY',
+    'SURGICAL_MONITOR',
+    'ELECTROSURGICAL_UNIT',
+    'VENTILATOR',
+    'DEFIBRILLATOR'
+];
+
+export default function SurgeryForm({
+    initialData,
+    allSurgeries = [],
+    allAssets = [],
+    prefilledDate,
+    prefilledTime,
+    prefilledOr,
+    onSubmit,
+    onCancel,
+    externalError
+}: SurgeryFormProps) {
     const isEditMode = !!initialData;
 
-    const [formData, setFormData] = useState({
-        surgery_code: initialData?.surgery_code || `SURG-2026-${Math.floor(Math.random() * 900 + 100)}`,
-        patient_id: initialData?.patient_id || `PAT-${Math.floor(Math.random() * 9000 + 1000)}`,
-        procedure_name: initialData?.procedure_name || '',
-        surgery_type: initialData?.surgery_type || 'LAPAROSCOPIC',
-        operating_room: initialData?.operating_room || 'OR-1',
-        scheduled_start_time: initialData?.scheduled_start_time ? initialData.scheduled_start_time.substring(0, 16) : new Date(Date.now() + 24 * 3600 * 1000).toISOString().substring(0, 16),
-        scheduled_end_time: initialData?.scheduled_end_time ? initialData.scheduled_end_time.substring(0, 16) : new Date(Date.now() + 27 * 3600 * 1000).toISOString().substring(0, 16),
-        surgeon_name: initialData?.surgeon_name || 'Dr. Ananya Sharma',
-        status: initialData?.status || 'SCHEDULED',
-        notes: initialData?.notes || ''
+    // Parse initial or prefilled start date and time
+    let defaultDate = prefilledDate || new Date().toISOString().split('T')[0];
+    let defaultStartTime = prefilledTime || '09:00';
+    let defaultDuration = '2';
+
+    if (initialData?.scheduled_start_time) {
+        const start = new Date(initialData.scheduled_start_time);
+        if (!isNaN(start.getTime())) {
+            defaultDate = start.toISOString().split('T')[0];
+            const hh = String(start.getHours()).padStart(2, '0');
+            const mm = String(start.getMinutes()).padStart(2, '0');
+            defaultStartTime = `${hh}:${mm}`;
+
+            if (initialData.scheduled_end_time) {
+                const end = new Date(initialData.scheduled_end_time);
+                const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                if (diffHours > 0) {
+                    defaultDuration = String(diffHours);
+                }
+            }
+        }
+    }
+
+    const [procedureName, setProcedureName] = useState(initialData?.procedure_name || '');
+    const [surgeryType, setSurgeryType] = useState(initialData?.surgery_type || 'LAPAROSCOPIC');
+    const [operatingRoom, setOperatingRoom] = useState(initialData?.operating_room || prefilledOr || 'OR-1');
+    const [department, setDepartment] = useState(initialData?.department || 'General Surgery');
+    const [surgeonName, setSurgeonName] = useState(initialData?.surgeon_name || 'Dr. Ananya Sharma');
+    const [patientId, setPatientId] = useState(initialData?.patient_id || `PAT-${Math.floor(Math.random() * 9000 + 1000)}`);
+    const [surgeryCode, setSurgeryCode] = useState(initialData?.surgery_code || `SURG-2026-${Math.floor(Math.random() * 900 + 100)}`);
+    const [date, setDate] = useState(defaultDate);
+    const [startTime, setStartTime] = useState(defaultStartTime);
+    const [durationHours, setDurationHours] = useState(defaultDuration);
+    const [status, setStatus] = useState(initialData?.status || 'SCHEDULED');
+    const [notes, setNotes] = useState(initialData?.notes || '');
+
+    // Equipment list editor
+    const [equipmentList, setEquipmentList] = useState<EquipmentItem[]>(() => {
+        if (initialData?.required_assets && initialData.required_assets.length > 0) {
+            return initialData.required_assets.map((r: any) => ({
+                required_category: r.required_category,
+                quantity: r.quantity || 1,
+                criticality: r.criticality || 'STANDARD',
+                assigned_asset_id: r.assigned_asset_id || null
+            }));
+        }
+        return DEFAULT_TEMPLATES[initialData?.surgery_type || 'LAPAROSCOPIC'] || DEFAULT_TEMPLATES.LAPAROSCOPIC;
     });
 
-    const [templatePreview, setTemplatePreview] = useState<any[]>([]);
-    const [error, setError] = useState<string | null>(externalError || null);
+    // Conflict warnings and errors
+    const [formError, setFormError] = useState<string | null>(externalError || null);
+    const [shortageWarnings, setShortageWarnings] = useState<string[]>([]);
+    const [confirmedShortage, setConfirmedShortage] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        if (externalError) {
-            setError(externalError);
-        }
+        if (externalError) setFormError(externalError);
     }, [externalError]);
 
-    // Fetch equipment template preview when surgery_type changes
-    useEffect(() => {
-        const fetchTemplate = async () => {
-            try {
-                const res = await fetch(`/api/surgeries/templates?type=${formData.surgery_type}`);
-                const data = await res.json();
-                if (data.success) {
-                    setTemplatePreview(data.data);
-                }
-            } catch (err) {
-                console.error('Failed to load templates', err);
-            }
+    // When surgery type changes in Add Mode, auto-fill standard equipment list
+    const handleSurgeryTypeChange = (newType: string) => {
+        setSurgeryType(newType);
+        if (!isEditMode) {
+            const template = DEFAULT_TEMPLATES[newType] || DEFAULT_TEMPLATES.GENERAL_SURGERY;
+            setEquipmentList([...template]);
+        }
+    };
+
+    // Calculate start & end ISO strings
+    const computeStartAndEndTimes = () => {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startDate = new Date(`${date}T00:00:00`);
+        startDate.setHours(hours || 0, minutes || 0, 0, 0);
+
+        const durationMs = parseFloat(durationHours) * 60 * 60 * 1000;
+        const endDate = new Date(startDate.getTime() + durationMs);
+
+        return {
+            startIso: startDate.toISOString(),
+            endIso: endDate.toISOString()
         };
-        fetchTemplate();
-    }, [formData.surgery_type]);
+    };
+
+    // Equipment list item actions
+    const handleAddEquipment = () => {
+        setEquipmentList([
+            ...equipmentList,
+            { required_category: 'SURGICAL_MONITOR', quantity: 1, criticality: 'STANDARD' }
+        ]);
+        setShortageWarnings([]);
+    };
+
+    const handleRemoveEquipment = (index: number) => {
+        setEquipmentList(equipmentList.filter((_, i) => i !== index));
+        setShortageWarnings([]);
+    };
+
+    const handleEquipmentChange = (index: number, field: keyof EquipmentItem, value: any) => {
+        const updated = [...equipmentList];
+        updated[index] = { ...updated[index], [field]: value };
+        setEquipmentList(updated);
+        setShortageWarnings([]);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
+        setFormError(null);
 
-        if (!formData.procedure_name || !formData.operating_room || !formData.scheduled_start_time || !formData.scheduled_end_time) {
-            setError('Please fill in procedure name, OR, and scheduled times.');
+        if (!procedureName.trim()) {
+            setFormError('Please enter procedure name.');
             return;
         }
 
-        const startTime = new Date(formData.scheduled_start_time);
-        const endTime = new Date(formData.scheduled_end_time);
+        if (equipmentList.length === 0) {
+            setFormError('Please include at least one required equipment item.');
+            return;
+        }
 
-        if (endTime <= startTime) {
-            setError('Scheduled end time must be after scheduled start time.');
+        const { startIso, endIso } = computeStartAndEndTimes();
+
+        // Check for conflicts: OR double booking & fleet shortages
+        const conflictCheck = checkPreSaveConflicts(
+            {
+                id: initialData?.id,
+                operating_room: operatingRoom,
+                scheduled_start_time: startIso,
+                scheduled_end_time: endIso,
+                required_assets: equipmentList,
+                status
+            },
+            allSurgeries,
+            allAssets
+        );
+
+        // 1. Operating Room Double-Booking: BLOCKED
+        if (conflictCheck.isDoubleBooked) {
+            setFormError(conflictCheck.doubleBookingError || 'Operating room is already booked for this time window.');
+            return;
+        }
+
+        // 2. Equipment Shortage: Show warning and require confirmation if not confirmed yet
+        if (conflictCheck.hasShortage && !confirmedShortage) {
+            setShortageWarnings(conflictCheck.shortageWarnings);
             return;
         }
 
         setIsSubmitting(true);
         try {
             await onSubmit({
-                ...formData,
-                scheduled_start_time: startTime.toISOString(),
-                scheduled_end_time: endTime.toISOString()
+                id: initialData?.id,
+                surgery_code: surgeryCode,
+                patient_id: patientId,
+                procedure_name: procedureName.trim(),
+                surgery_type: surgeryType,
+                operating_room: operatingRoom,
+                department,
+                surgeon_name: surgeonName.trim(),
+                scheduled_start_time: startIso,
+                scheduled_end_time: endIso,
+                status,
+                notes,
+                required_assets: equipmentList
             });
         } catch (err: any) {
-            setError(err.message || 'Database write failure: Unable to save surgery record.');
+            setFormError(err.message || 'Could not save surgery. Please check input fields.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 p-5 bg-slate-900 text-slate-100 rounded-lg border border-slate-700">
-            <h3 className="text-lg font-semibold text-sky-400">
-                {isEditMode ? 'Edit Surgery Schedule' : 'Schedule New Surgery Procedure'}
-            </h3>
+        <form onSubmit={handleSubmit} className="bg-panel border border-border rounded-md p-5 space-y-5">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+                <h3 className="text-lg font-semibold text-text-primary">
+                    {isEditMode ? 'Edit Surgery' : 'Schedule Surgery'}
+                </h3>
+                <span className="text-xs text-text-muted">Fields marked with * are required</span>
+            </div>
 
-            {error && (
-                <div className="p-3 bg-rose-950/80 border border-rose-500 text-rose-200 text-xs font-mono rounded flex items-center justify-between">
-                    <span>🛑 <strong>Database Write / Validation Error:</strong> {error}</span>
-                    <button type="button" onClick={() => setError(null)} className="text-[11px] underline text-rose-300">
+            {/* Error Message */}
+            {formError && (
+                <div className="p-3.5 bg-status-notready-bg border border-status-notready-solid text-status-notready-text text-sm rounded flex items-start justify-between">
+                    <div>
+                        <span className="font-semibold block mb-0.5">Could not save surgery:</span>
+                        <span>{formError}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFormError(null)}
+                        className="text-xs text-status-notready-text underline ml-3"
+                    >
                         Dismiss
                     </button>
                 </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Procedure Name *</label>
+            {/* Equipment Shortage Warning Box */}
+            {shortageWarnings.length > 0 && !confirmedShortage && (
+                <div className="p-4 bg-status-atrisk-bg border border-status-atrisk-solid text-status-atrisk-text text-sm rounded-md space-y-2">
+                    <div className="font-semibold flex items-center gap-1.5">
+                        <span>Equipment Availability Warning</span>
+                    </div>
+                    <p className="text-xs text-status-atrisk-text">
+                        The following equipment shortages were detected for this surgery schedule:
+                    </p>
+                    <ul className="list-disc list-inside text-xs space-y-1 font-medium">
+                        {shortageWarnings.map((warning, idx) => (
+                            <li key={idx}>{warning}</li>
+                        ))}
+                    </ul>
+                    <div className="pt-2 flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setConfirmedShortage(true);
+                                setShortageWarnings([]);
+                            }}
+                            className="bg-status-atrisk-solid hover:opacity-90 text-white px-3 py-1.5 rounded text-xs font-medium cursor-pointer"
+                        >
+                            Proceed and save anyway
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShortageWarnings([])}
+                            className="border border-status-atrisk-solid bg-panel hover:bg-status-atrisk-bg text-status-atrisk-text px-3 py-1.5 rounded text-xs font-medium cursor-pointer"
+                        >
+                            Review equipment
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Procedure Name */}
+                <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-text-primary mb-1">
+                        Procedure name *
+                    </label>
                     <input
                         type="text"
-                        name="procedure_name"
-                        value={formData.procedure_name}
-                        onChange={(e) => setFormData({ ...formData, procedure_name: e.target.value })}
-                        placeholder="e.g. Laparoscopic Cholecystectomy"
                         required
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-sky-500"
+                        value={procedureName}
+                        onChange={(e) => setProcedureName(e.target.value)}
+                        placeholder="e.g. Laparoscopic Cholecystectomy"
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                     />
                 </div>
 
+                {/* Surgery Type */}
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Surgery Procedure Type (Template)</label>
+                    <label className="block text-xs font-medium text-text-primary mb-1">
+                        Surgery type *
+                    </label>
                     <select
-                        name="surgery_type"
-                        value={formData.surgery_type}
-                        onChange={(e) => setFormData({ ...formData, surgery_type: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-sky-500 font-semibold text-sky-300"
+                        value={surgeryType}
+                        onChange={(e) => handleSurgeryTypeChange(e.target.value)}
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                     >
-                        <option value="LAPAROSCOPIC">LAPAROSCOPIC</option>
-                        <option value="CARDIAC">CARDIAC</option>
-                        <option value="ORTHOPEDIC">ORTHOPEDIC</option>
-                        <option value="NEUROSURGERY">NEUROSURGERY</option>
-                        <option value="GENERAL_SURGERY">GENERAL SURGERY</option>
+                        <option value="LAPAROSCOPIC">Laparoscopic Surgery</option>
+                        <option value="CARDIAC">Cardiac Surgery</option>
+                        <option value="ORTHOPEDIC">Orthopedic Surgery</option>
+                        <option value="NEUROSURGERY">Neurosurgery</option>
+                        <option value="GENERAL_SURGERY">General Surgery</option>
                     </select>
                 </div>
 
+                {/* Operating Room */}
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Patient ID & Surgery Code</label>
-                    <div className="flex gap-2">
+                    <label className="block text-xs font-medium text-text-primary mb-1">
+                        Operating room *
+                    </label>
+                    <select
+                        value={operatingRoom}
+                        onChange={(e) => setOperatingRoom(e.target.value)}
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                    >
+                        <option value="OR-1">Operating Room 1</option>
+                        <option value="OR-2">Operating Room 2</option>
+                        <option value="OR-3">Operating Room 3</option>
+                        <option value="OR-4">Operating Room 4</option>
+                        <option value="OR-5">Operating Room 5</option>
+                        <option value="OR-6">Operating Room 6</option>
+                    </select>
+                </div>
+
+                {/* Date */}
+                <div>
+                    <label className="block text-xs font-medium text-text-primary mb-1">
+                        Date *
+                    </label>
+                    <input
+                        type="date"
+                        required
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                    />
+                </div>
+
+                {/* Start Time & Duration */}
+                <div className="grid grid-cols-2 gap-2">
+                    <div>
+                        <label className="block text-xs font-medium text-text-primary mb-1">
+                            Start time *
+                        </label>
                         <input
-                            type="text"
-                            name="patient_id"
-                            value={formData.patient_id}
-                            onChange={(e) => setFormData({ ...formData, patient_id: e.target.value })}
-                            placeholder="Patient ID"
-                            className="w-1/2 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm"
+                            type="time"
+                            required
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                         />
-                        <input
-                            type="text"
-                            name="surgery_code"
-                            value={formData.surgery_code}
-                            onChange={(e) => setFormData({ ...formData, surgery_code: e.target.value })}
-                            placeholder="Surgery Code"
-                            className="w-1/2 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm font-mono text-sky-300"
-                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-text-primary mb-1">
+                            Expected duration
+                        </label>
+                        <select
+                            value={durationHours}
+                            onChange={(e) => setDurationHours(e.target.value)}
+                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                        >
+                            <option value="1">1 hour</option>
+                            <option value="1.5">1.5 hours</option>
+                            <option value="2">2 hours</option>
+                            <option value="2.5">2.5 hours</option>
+                            <option value="3">3 hours</option>
+                            <option value="3.5">3.5 hours</option>
+                            <option value="4">4 hours</option>
+                            <option value="5">5 hours</option>
+                        </select>
                     </div>
                 </div>
 
+                {/* Department */}
                 <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Lead Surgeon</label>
+                    <label className="block text-xs font-medium text-text-primary mb-1">
+                        Department
+                    </label>
+                    <select
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                    >
+                        <option value="General Surgery">General Surgery</option>
+                        <option value="Cardiothoracic Surgery">Cardiothoracic Surgery</option>
+                        <option value="Orthopedic Surgery">Orthopedic Surgery</option>
+                        <option value="Neurosurgery">Neurosurgery</option>
+                        <option value="Anesthesiology">Anesthesiology</option>
+                        <option value="Pediatric Surgery">Pediatric Surgery</option>
+                    </select>
+                </div>
+
+                {/* Lead Surgeon */}
+                <div>
+                    <label className="block text-xs font-medium text-text-primary mb-1">
+                        Lead surgeon
+                    </label>
                     <input
                         type="text"
-                        name="surgeon_name"
-                        value={formData.surgeon_name}
-                        onChange={(e) => setFormData({ ...formData, surgeon_name: e.target.value })}
-                        placeholder="Dr. Name"
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm"
+                        value={surgeonName}
+                        onChange={(e) => setSurgeonName(e.target.value)}
+                        placeholder="Dr. Surgeon Name"
+                        className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Assigned Operating Room (OT) *</label>
-                    <select
-                        name="operating_room"
-                        value={formData.operating_room}
-                        onChange={(e) => setFormData({ ...formData, operating_room: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm font-bold text-emerald-400 focus:outline-none"
+                {/* Status (if editing) */}
+                {isEditMode && (
+                    <div>
+                        <label className="block text-xs font-medium text-text-primary mb-1">
+                            Status
+                        </label>
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                        >
+                            <option value="SCHEDULED">Scheduled</option>
+                            <option value="IN_PROGRESS">In Progress</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                    </div>
+                )}
+            </div>
+
+            {/* Equipment List Editor */}
+            <div className="pt-3 border-t border-border space-y-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h4 className="text-sm font-semibold text-text-primary">
+                            Required Equipment List
+                        </h4>
+                        <p className="text-xs text-text-muted">
+                            Verify and edit medical equipment required for this procedure.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleAddEquipment}
+                        className="border border-border-strong bg-panel hover:bg-subtle text-text-primary px-3 py-1 rounded text-xs font-medium transition-colors cursor-pointer"
                     >
-                        <option value="OR-1">OR Suite 1</option>
-                        <option value="OR-2">OR Suite 2</option>
-                        <option value="OR-3">OR Suite 3</option>
-                        <option value="OR-4">OR Suite 4</option>
-                        <option value="OR-5">OR Suite 5</option>
-                        <option value="OR-6">OR Suite 6</option>
-                    </select>
+                        + Add equipment
+                    </button>
                 </div>
 
-                <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Surgery Status</label>
-                    <select
-                        name="status"
-                        value={formData.status}
-                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm"
-                    >
-                        <option value="SCHEDULED">SCHEDULED</option>
-                        <option value="IN_PROGRESS">IN_PROGRESS</option>
-                        <option value="COMPLETED">COMPLETED</option>
-                        <option value="CANCELLED">CANCELLED</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Scheduled Start Time *</label>
-                    <input
-                        type="datetime-local"
-                        name="scheduled_start_time"
-                        value={formData.scheduled_start_time}
-                        onChange={(e) => setFormData({ ...formData, scheduled_start_time: e.target.value })}
-                        required
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Scheduled End Time *</label>
-                    <input
-                        type="datetime-local"
-                        name="scheduled_end_time"
-                        value={formData.scheduled_end_time}
-                        onChange={(e) => setFormData({ ...formData, scheduled_end_time: e.target.value })}
-                        required
-                        className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200"
-                    />
+                <div className="border border-border rounded-md overflow-hidden bg-panel">
+                    <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr className="bg-subtle border-b border-border text-text-secondary font-medium">
+                                <th className="p-2.5">Equipment type</th>
+                                <th className="p-2.5 w-24">Quantity</th>
+                                <th className="p-2.5 w-36">Criticality</th>
+                                <th className="p-2.5 w-16 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {equipmentList.map((item, idx) => (
+                                <tr key={idx} className="hover:bg-subtle">
+                                    <td className="p-2">
+                                        <select
+                                            value={item.required_category}
+                                            onChange={(e) => handleEquipmentChange(idx, 'required_category', e.target.value)}
+                                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-2 py-1 text-xs focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                                        >
+                                            {AVAILABLE_CATEGORIES.map(cat => (
+                                                <option key={cat} value={cat}>
+                                                    {formatEnumValue(cat)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </td>
+                                    <td className="p-2">
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={5}
+                                            value={item.quantity}
+                                            onChange={(e) => handleEquipmentChange(idx, 'quantity', parseInt(e.target.value) || 1)}
+                                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-2 py-1 text-xs focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                                        />
+                                    </td>
+                                    <td className="p-2">
+                                        <select
+                                            value={item.criticality}
+                                            onChange={(e) => handleEquipmentChange(idx, 'criticality', e.target.value as any)}
+                                            className="w-full bg-panel border border-border-strong text-text-primary rounded px-2 py-1 text-xs focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
+                                        >
+                                            <option value="CRITICAL">Critical</option>
+                                            <option value="IMPORTANT">Important</option>
+                                            <option value="STANDARD">Standard</option>
+                                        </select>
+                                    </td>
+                                    <td className="p-2 text-right">
+                                        {equipmentList.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveEquipment(idx)}
+                                                className="text-status-notready-text hover:text-status-notready-solid text-xs px-2 py-1 cursor-pointer"
+                                            >
+                                                Remove
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            {/* Standard Equipment Template Preview */}
-            <div className="p-3 bg-slate-800/60 rounded border border-slate-700 mt-3">
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold uppercase text-slate-300">
-                        ⚡ Standard Equipment Template ({formData.surgery_type})
-                    </span>
-                    <span className="text-xs text-sky-400 font-medium">Auto-populates required equipment</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {templatePreview.map((item, idx) => (
-                        <div key={idx} className="px-2.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-200">{item.required_category}</span>
-                            <span className="text-slate-400">×{item.quantity}</span>
-                            <span className={`px-1.5 py-0.2 rounded font-bold text-[10px] ${
-                                item.criticality === 'CRITICAL' ? 'bg-rose-950 text-rose-300 border border-rose-700' :
-                                item.criticality === 'IMPORTANT' ? 'bg-amber-950 text-amber-300 border border-amber-700' :
-                                'bg-slate-800 text-slate-400'
-                            }`}>
-                                {item.criticality}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+            {/* Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
                 <button
                     type="button"
                     onClick={onCancel}
                     disabled={isSubmitting}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-sm font-medium disabled:opacity-50"
+                    className="px-4 py-2 border border-border-strong bg-panel hover:bg-subtle text-text-primary rounded text-sm font-medium transition-colors cursor-pointer"
                 >
                     Cancel
                 </button>
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded text-sm font-medium shadow-md flex items-center gap-2"
+                    className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                    {isSubmitting ? 'Writing to Database...' : isEditMode ? 'Update Surgery' : 'Schedule Surgery'}
+                    {isSubmitting ? 'Saving surgery...' : isEditMode ? 'Update surgery' : 'Schedule surgery'}
                 </button>
             </div>
         </form>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { UserRole, canUserEdit } from '@/lib/auth';
-import RoleSelector from '@/components/dashboard/RoleSelector';
+import { formatEnumValue, formatRuleMessage, getReadinessStatusTheme } from '@/lib/formatters';
 
 export default function SurgeryDetailPage({ params }: { params: { id: string } }) {
     const [role, setRole] = useState<UserRole>('biomedical_engineer');
@@ -41,7 +41,6 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
             if (readinessData.success && readinessData.assessment) {
                 setAssessment(readinessData.assessment);
 
-                // Fetch AI Explanation (Stage 6)
                 try {
                     const expRes = await fetch('/api/explanation', {
                         method: 'POST',
@@ -79,24 +78,24 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
 
             const data = await res.json();
             if (!res.ok || !data.success) {
-                setFeedbackMessage(data.error || 'Failed to save equipment override');
+                setFeedbackMessage(data.error || 'Could not save equipment changes.');
                 return;
             }
 
-            setFeedbackMessage('✓ Manual equipment override persisted successfully!');
+            setFeedbackMessage('Equipment changes saved successfully.');
             setIsOverriding(false);
             fetchData();
         } catch (err: any) {
-            setFeedbackMessage(err.message);
+            setFeedbackMessage(err.message || 'Could not save equipment changes.');
         }
     };
 
     if (loading) {
         return (
-            <div className="p-8 text-center text-slate-400 bg-slate-950 min-h-screen flex items-center justify-center font-sans">
-                <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Loading surgical equipment & readiness evaluation...</span>
+            <div className="p-12 text-center text-text-muted min-h-[400px] flex items-center justify-center text-sm">
+                <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                    <span>Loading surgery details...</span>
                 </div>
             </div>
         );
@@ -104,198 +103,168 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
 
     if (!surgery) {
         return (
-            <div className="p-8 text-center text-rose-400 bg-slate-950 min-h-screen font-sans">
-                Surgery not found.{' '}
-                <Link href="/overview" className="underline text-sky-400">
-                    Back to Overview
+            <div className="max-w-7xl mx-auto p-6 text-center text-sm">
+                <p className="text-status-notready-text">Surgery not found.</p>
+                <Link href="/surgeries" className="text-accent underline mt-2 inline-block">
+                    Back to surgeries
                 </Link>
             </div>
         );
     }
 
     const finalStatus = (assessment?.final_status || surgery.status || 'READY').toUpperCase();
-    const statusBadgeColor =
-        finalStatus === 'NOT_READY'
-            ? 'bg-rose-950 text-rose-300 border-rose-800'
-            : finalStatus === 'AT_RISK'
-            ? 'bg-amber-950 text-amber-300 border-amber-800'
-            : 'bg-emerald-950 text-emerald-300 border-emerald-800';
+    const statusTheme = getReadinessStatusTheme(finalStatus);
 
     return (
-        <div className="p-6 bg-slate-950 min-h-screen text-slate-100 font-sans space-y-6">
-            {/* Header & Role Selector */}
-            <RoleSelector currentRole={role} onRoleChange={setRole} />
+        <div className="space-y-6">
+            {/* Page Header Band */}
+            <div className="page-header-band px-4 sm:px-6 py-5 border-b border-border">
+                <div className="max-w-7xl mx-auto">
+                    <Link href="/surgeries" className="text-sm font-medium text-accent hover:underline inline-flex items-center gap-1 mb-2">
+                        ← Back to surgeries
+                    </Link>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-page-title text-text-primary">
+                                    {surgery.procedure_name}
+                                </h1>
+                                <span className={`px-2.5 py-0.5 text-xs font-medium rounded-[4px] border ${statusTheme.badgeClass}`}>
+                                    {statusTheme.label}
+                                </span>
+                            </div>
+                            <p className="text-sm text-text-secondary mt-1 tabular-nums">
+                                Surgery code: {surgery.surgery_code} · {formatEnumValue(surgery.surgery_type || 'GENERAL_SURGERY')}
+                            </p>
+                        </div>
 
-            <div className="flex items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <Link href="/overview" className="text-xs text-sky-400 hover:underline">
-                            ← Back to Overview
-                        </Link>
-                        <span className="text-slate-600">/</span>
-                        <span className="text-xs font-mono text-slate-400">{surgery.surgery_code}</span>
+                        {canEdit && (
+                            <button
+                                onClick={() => setIsOverriding(!isOverriding)}
+                                className="border border-border-strong bg-panel hover:bg-table-hover text-text-primary px-3.5 py-1.5 rounded-[4px] text-sm font-medium transition-colors self-start sm:self-auto"
+                            >
+                                {isOverriding ? 'Cancel override' : 'Change equipment assignment'}
+                            </button>
+                        )}
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-100 mt-1 flex items-center gap-3">
-                        <span>{surgery.procedure_name}</span>
-                        <span className={`px-3 py-1 text-xs font-extrabold border rounded ${statusBadgeColor}`}>
-                            {finalStatus}
-                        </span>
-                    </h1>
                 </div>
+            </div>
 
-                {canEdit ? (
-                    <button
-                        onClick={() => setIsOverriding(!isOverriding)}
-                        className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold transition shadow-lg"
-                    >
-                        {isOverriding ? 'Cancel Manual Override' : 'Override Equipment Requirements'}
-                    </button>
-                ) : (
-                    <div className="text-xs text-amber-400 bg-amber-950/80 border border-amber-800 px-3 py-1.5 rounded font-mono">
-                        [READ-ONLY VIEWER ROLE]
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6 pb-12">
+                {feedbackMessage && (
+                    <div className="p-3.5 bg-subtle border border-accent text-accent text-sm rounded-[4px]">
+                        {feedbackMessage}
                     </div>
                 )}
-            </div>
 
-            {feedbackMessage && (
-                <div className="p-3 bg-sky-950 border border-sky-800 text-sky-200 text-xs rounded-lg">
-                    {feedbackMessage}
-                </div>
-            )}
-
-            {/* Surgery Details Metadata Card */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-                <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Operating Room</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono mt-0.5 block">{surgery.operating_room}</span>
-                </div>
-                <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Lead Surgeon</span>
-                    <span className="text-sm font-bold text-slate-100 mt-0.5 block">{surgery.surgeon_name}</span>
-                </div>
-                <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Patient ID</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono mt-0.5 block">{surgery.patient_id}</span>
-                </div>
-                <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">Scheduled Window</span>
-                    <span className="text-sm font-bold text-slate-100 font-mono mt-0.5 block">
-                        {surgery.scheduled_start_time ? surgery.scheduled_start_time.split('T')[1]?.substring(0, 5) : '08:00'} -{' '}
-                        {surgery.scheduled_end_time ? surgery.scheduled_end_time.split('T')[1]?.substring(0, 5) : '10:00'}
-                    </span>
-                </div>
-            </div>
-
-            {/* Stage 6 AI Explanation & Actionable Recommendations Card */}
-            {explanationData && (
-                <div className="bg-slate-900 border border-indigo-900/60 rounded-xl p-5 shadow-lg space-y-3">
+                {/* Overall Status & Plain-English Explanation at the Top */}
+                <div className={`p-5 rounded-[6px] border border-border border-l-[4px] ${statusTheme.bannerClass} space-y-3`}>
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                            AI Explanation & Recommended Actions (Stage 6)
-                        </h3>
-                        <span className="text-[10px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded">
-                            {explanationData.is_llm_generated ? 'LLM Generated (Validated)' : 'Templated Ground Truth Fallback'}
-                        </span>
+                        <div>
+                            <h2 className="text-base font-semibold text-text-primary">
+                                Readiness Status: {statusTheme.label}
+                            </h2>
+                        </div>
                     </div>
 
-                    <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-300 leading-relaxed font-sans">
-                        {explanationData.explanation}
-                    </div>
+                    {explanationData && explanationData.explanation && (
+                        <div className="text-sm leading-relaxed text-text-primary max-w-[70ch]">
+                            {explanationData.explanation}
+                        </div>
+                    )}
 
-                    <div>
-                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Recommended Actions:</h4>
-                        <ul className="space-y-1.5">
-                            {(explanationData.recommended_actions || []).map((action: string, idx: number) => (
-                                <li key={idx} className="flex items-start gap-2 text-xs text-slate-200">
-                                    <span className="text-sky-400 font-bold">•</span>
-                                    <span>{action}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            {/* Per-Equipment Status Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-semibold text-slate-100">
-                        Per-Equipment Status, Risk Factors & Assigned Engineers
-                    </h3>
-                    <span className="text-xs text-slate-400 font-mono bg-slate-800 px-2.5 py-1 rounded">
-                        {assessment?.asset_assessments?.length || equipmentList.length} Items Required
-                    </span>
+                    {explanationData && explanationData.recommended_actions && explanationData.recommended_actions.length > 0 && (
+                        <div className="pt-2 border-t border-border">
+                            <h3 className="text-xs font-semibold text-text-secondary mb-1">
+                                Recommended actions:
+                            </h3>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-text-primary">
+                                {explanationData.recommended_actions.map((action: string, idx: number) => (
+                                    <li key={idx}>{action}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs font-sans text-slate-300">
-                        <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider text-[10px]">
-                            <tr>
-                                <th className="p-3">Required Category</th>
-                                <th className="p-3">Assigned Asset</th>
-                                <th className="p-3">Criticality</th>
-                                <th className="p-3">Rule Status</th>
-                                <th className="p-3">Triggering Rule</th>
-                                <th className="p-3">ML Risk Factor</th>
-                                <th className="p-3">Assigned Bio Eng / ETA</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800">
-                            {(assessment?.asset_assessments || []).map((item: any, idx: number) => {
-                                const isNotReady = item.status === 'NOT_READY';
-                                const isAtRisk = item.status === 'AT_RISK';
+                {/* Surgery Metadata Card */}
+                <div className="bg-panel border border-border rounded-[6px] p-5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                        <div>
+                            <span className="text-xs font-medium text-text-muted block">Operating room</span>
+                            <span className="font-semibold text-text-primary mt-0.5 block">{surgery.operating_room}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs font-medium text-text-muted block">Lead surgeon</span>
+                            <span className="font-semibold text-text-primary mt-0.5 block">{surgery.surgeon_name}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs font-medium text-text-muted block">Patient ID</span>
+                            <span className="font-semibold text-text-primary mt-0.5 block tabular-nums">{surgery.patient_id}</span>
+                        </div>
+                        <div>
+                            <span className="text-xs font-medium text-text-muted block">Scheduled time</span>
+                            <span className="font-semibold text-text-primary mt-0.5 block tabular-nums">
+                                {surgery.scheduled_start_time ? surgery.scheduled_start_time.split('T')[1]?.substring(0, 5) : '08:00'} –{' '}
+                                {surgery.scheduled_end_time ? surgery.scheduled_end_time.split('T')[1]?.substring(0, 5) : '10:00'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-                                return (
-                                    <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
-                                        <td className="p-3 font-semibold text-slate-100">{item.required_category}</td>
-                                        <td className="p-3 font-mono text-slate-300">
-                                            {item.asset_tag ? `${item.asset_name} [${item.asset_tag}]` : 'UNASSIGNED'}
+                {/* Per-Equipment Status Table */}
+                <div className="bg-panel border border-border rounded-[6px] overflow-hidden">
+                    <div className="panel-header-band p-4 border-b border-border flex items-center justify-between">
+                        <div>
+                            <h3 className="text-base font-semibold text-text-primary">
+                                Required Equipment ({assessment?.asset_assessments?.length || equipmentList.length} items)
+                            </h3>
+                            <p className="text-sm text-text-secondary mt-0.5">
+                                Status and risk check for each piece of equipment assigned to this surgery.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr className="border-b border-border bg-table-header text-xs font-semibold text-text-primary">
+                                    <th className="p-3">Required Equipment</th>
+                                    <th className="p-3">Assigned Asset</th>
+                                    <th className="p-3">Criticality</th>
+                                    <th className="p-3">Status</th>
+                                    <th className="p-3">Safety Assessment</th>
+                                    <th className="p-3">Assigned Engineer</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {(assessment?.asset_assessments || []).map((item: any, idx: number) => {
+                                    const itemTheme = getReadinessStatusTheme(item.status);
+                                    const ruleText = item.rule_fired ? formatRuleMessage(item.rule_fired) : 'Checked and ready';
+
+                                    return (
+                                        <tr key={idx} className="odd:bg-panel even:bg-table-stripe hover:bg-table-hover transition-colors">
+                                            <td className="p-3 font-medium text-text-primary">{item.required_category}</td>
+                                            <td className="p-3 text-text-primary tabular-nums">
+                                                {item.asset_tag ? `${item.asset_name || ''} (${item.asset_tag})` : 'Unassigned'}
+                                            </td>
+                                            <td className="p-3 text-text-secondary">
+                                                {item.criticality ? formatEnumValue(item.criticality) : 'Routine'}
+                                            </td>
+                                            <td className="p-3">
+                                                <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-[4px] ${itemTheme.badgeClass}`}>
+                                                    {itemTheme.label}
+                                                </span>
+                                            </td>
+                                        <td className="p-3 text-xs text-text-muted">
+                                            {ruleText}
                                         </td>
-                                        <td className="p-3">
-                                            <span
-                                                className={`px-2 py-0.5 text-[10px] font-bold border rounded ${
-                                                    item.criticality === 'CRITICAL'
-                                                        ? 'bg-rose-950 text-rose-300 border-rose-800'
-                                                        : item.criticality === 'IMPORTANT'
-                                                        ? 'bg-amber-950 text-amber-300 border-amber-800'
-                                                        : 'bg-slate-800 text-slate-300 border-slate-700'
-                                                }`}
-                                            >
-                                                {item.criticality}
-                                            </span>
-                                        </td>
-                                        <td className="p-3">
-                                            <span
-                                                className={`px-2 py-0.5 text-[10px] font-bold border rounded ${
-                                                    isNotReady
-                                                        ? 'bg-rose-950 text-rose-300 border-rose-800'
-                                                        : isAtRisk
-                                                        ? 'bg-amber-950 text-amber-300 border-amber-800'
-                                                        : 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                                }`}
-                                            >
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 font-mono text-[11px] text-slate-400">{item.rule_fired}</td>
-                                        <td className="p-3 font-mono text-[11px]">
-                                            {isNotReady ? (
-                                                <span className="text-rose-400">High Deficit (Rule Triggered)</span>
-                                            ) : isAtRisk ? (
-                                                <span className="text-amber-400">0.45 (Medium Risk)</span>
-                                            ) : (
-                                                <span className="text-emerald-400">0.05 (Low Risk)</span>
-                                            )}
-                                        </td>
-                                        <td className="p-3 text-slate-300 font-mono text-[11px]">
-                                            {isNotReady ? (
-                                                <span className="text-rose-400 font-bold">Eng: Alex Vance (ETA 30 mins)</span>
-                                            ) : isAtRisk ? (
-                                                <span className="text-amber-400">Eng: Sarah Connor (ETA 1 hr)</span>
-                                            ) : (
-                                                <span className="text-slate-400">Eng: Duty Engineer (On Standby)</span>
-                                            )}
+                                        <td className="p-3 text-xs text-text-muted">
+                                            {item.status === 'NOT_READY'
+                                                ? 'Alex Vance (ETA 30 mins)'
+                                                : item.status === 'AT_RISK'
+                                                ? 'Sarah Connor (ETA 1 hr)'
+                                                : 'Duty Engineer on standby'}
                                         </td>
                                     </tr>
                                 );
@@ -305,21 +274,23 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
                 </div>
             </div>
 
-            {/* Manual Override Controls (Visible only to authorized roles) */}
+            {/* Equipment Override Controls */}
             {isOverriding && canEdit && (
-                <div className="bg-slate-900 border border-sky-800 rounded-xl p-5 shadow-lg space-y-4">
-                    <h3 className="text-sm font-bold text-sky-300 uppercase tracking-wider">
-                        Manual Equipment Template Override
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                        Select specific assets to assign to this surgery. Changes persist across future edits.
-                    </p>
+                <div className="bg-panel border border-border rounded-md p-5 space-y-4">
+                    <div>
+                        <h3 className="text-base font-semibold text-text-primary">
+                            Manual Equipment Assignment
+                        </h3>
+                        <p className="text-sm text-text-secondary mt-0.5">
+                            Reassign specific equipment units for this surgery.
+                        </p>
+                    </div>
 
                     <div className="space-y-3">
                         {equipmentList.map((req, idx) => (
-                            <div key={idx} className="flex flex-wrap items-center gap-3 bg-slate-950 p-3 rounded-lg border border-slate-800">
+                            <div key={idx} className="flex flex-wrap items-center gap-3 bg-subtle p-3 rounded border border-border">
                                 <div className="flex-1 min-w-[150px]">
-                                    <label className="text-[10px] text-slate-400 block">Category</label>
+                                    <label className="text-xs font-medium text-text-muted block mb-1">Equipment category</label>
                                     <input
                                         type="text"
                                         value={req.required_category}
@@ -328,12 +299,12 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
                                             updated[idx].required_category = e.target.value;
                                             setEquipmentList(updated);
                                         }}
-                                        className="w-full bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1"
+                                        className="w-full bg-panel border border-border-strong text-sm text-text-primary rounded px-3 py-1.5 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                                     />
                                 </div>
 
                                 <div className="flex-1 min-w-[200px]">
-                                    <label className="text-[10px] text-slate-400 block">Assigned Asset</label>
+                                    <label className="text-xs font-medium text-text-muted block mb-1">Assigned equipment</label>
                                     <select
                                         value={req.assigned_asset_id || ''}
                                         onChange={(e) => {
@@ -341,19 +312,19 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
                                             updated[idx].assigned_asset_id = e.target.value || null;
                                             setEquipmentList(updated);
                                         }}
-                                        className="w-full bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1"
+                                        className="w-full bg-panel border border-border-strong text-sm text-text-primary rounded px-3 py-1.5 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                                     >
                                         <option value="">Unassigned</option>
                                         {allAssets.map(a => (
                                             <option key={a.id} value={a.id}>
-                                                {a.name} [{a.asset_tag}] - Status: {a.status}
+                                                {a.name} ({a.asset_tag}) – {formatEnumValue(a.status)}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="text-[10px] text-slate-400 block">Criticality</label>
+                                    <label className="text-xs font-medium text-text-muted block mb-1">Criticality</label>
                                     <select
                                         value={req.criticality}
                                         onChange={(e) => {
@@ -361,11 +332,11 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
                                             updated[idx].criticality = e.target.value;
                                             setEquipmentList(updated);
                                         }}
-                                        className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1"
+                                        className="bg-panel border border-border-strong text-sm text-text-primary rounded px-3 py-1.5 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent"
                                     >
-                                        <option value="CRITICAL">CRITICAL</option>
-                                        <option value="IMPORTANT">IMPORTANT</option>
-                                        <option value="STANDARD">STANDARD</option>
+                                        <option value="CRITICAL">Critical</option>
+                                        <option value="IMPORTANT">Important</option>
+                                        <option value="STANDARD">Routine</option>
                                     </select>
                                 </div>
 
@@ -375,7 +346,7 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
                                         updated.splice(idx, 1);
                                         setEquipmentList(updated);
                                     }}
-                                    className="mt-4 px-2 py-1 bg-rose-900/60 hover:bg-rose-800 text-rose-200 rounded text-xs font-semibold"
+                                    className="mt-5 px-3 py-1.5 border border-status-notready-solid bg-panel hover:bg-status-notready-bg text-status-notready-text rounded text-xs font-medium transition-colors"
                                 >
                                     Remove
                                 </button>
@@ -383,16 +354,23 @@ export default function SurgeryDetailPage({ params }: { params: { id: string } }
                         ))}
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 pt-2">
                         <button
                             onClick={handleSaveEquipmentOverride}
-                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition"
+                            className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-[4px] text-sm font-medium transition-colors"
                         >
-                            Save Manual Override
+                            Save equipment changes
+                        </button>
+                        <button
+                            onClick={() => setIsOverriding(false)}
+                            className="border border-border-strong bg-panel hover:bg-table-hover text-text-primary px-4 py-2 rounded-[4px] text-sm font-medium transition-colors"
+                        >
+                            Cancel
                         </button>
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }

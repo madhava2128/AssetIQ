@@ -21,63 +21,53 @@ export default function SurgeryOverviewCards({
 }: SurgeryOverviewCardsProps) {
     return (
         <div className="space-y-4">
-            <div className="instrument-panel p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="bg-panel border border-border rounded p-4 flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-lg font-bold text-[var(--color-text-primary)] font-sans">
-                        Surgical Readiness Overview
+                    <h2 className="text-section-heading text-text-primary">
+                        Surgery Readiness Summary
                     </h2>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5 font-mono">
-                        Deterministic safety rules & XGBoost breakdown telemetry
+                    <p className="text-body text-text-secondary mt-0.5">
+                        Overview of scheduled surgeries and readiness status for the selected date.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 font-mono text-xs">
-                    <label className="text-[var(--color-text-muted)] font-semibold">Date Filter:</label>
+                <div className="flex items-center gap-2 text-body">
+                    <label className="text-text-secondary font-medium">Date:</label>
                     <input
                         type="date"
                         value={selectedDate}
                         onChange={(e) => onDateChange(e.target.value)}
-                        className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs font-mono rounded px-3 py-1.5 focus:outline-none focus:border-[var(--color-accent)] cursor-pointer"
+                        className="bg-panel border border-border-strong text-text-primary text-body rounded px-3 py-1.5 focus:outline-none focus:border-accent cursor-pointer tabular-nums"
                     />
                 </div>
             </div>
 
-            {/* KPI Instrumentation Readouts */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="instrument-panel p-4 font-mono">
-                    <span className="text-xs font-semibold text-[var(--color-text-muted)] block">Total Scheduled</span>
-                    <div className="text-3xl font-extrabold text-[var(--color-text-primary)] mt-1 font-mono">{totalSurgeries}</div>
-                    <span className="text-[11px] text-[var(--color-text-muted)] mt-1 block">Surgeries on {selectedDate}</span>
+            {/* Plain KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-subtle border border-border rounded p-4">
+                    <span className="text-caption font-medium text-text-secondary block">Total scheduled</span>
+                    <div className="text-2xl font-bold text-text-primary mt-1 tabular-nums">{totalSurgeries}</div>
+                    <span className="text-caption text-text-muted mt-1 block">Surgeries on {selectedDate}</span>
                 </div>
 
-                <div className="instrument-panel p-4 font-mono border-l-4 border-l-[var(--color-status-ready)]">
-                    <span className="text-xs font-bold text-[var(--color-status-ready)] flex items-center gap-1.5">
-                        <span className="text-sm font-black">●</span>
-                        <span>READY</span>
-                    </span>
-                    <div className="text-3xl font-extrabold text-[var(--color-status-ready)] mt-1 font-mono">{readyCount}</div>
-                    <span className="text-[11px] text-[var(--color-text-muted)] mt-1 block">100% Deterministic Passed</span>
+                <div className="bg-subtle border border-border rounded p-4">
+                    <span className="text-caption font-medium text-status-ready-text block">Ready</span>
+                    <div className="text-2xl font-bold text-status-ready-text mt-1 tabular-nums">{readyCount}</div>
+                    <span className="text-caption text-text-muted mt-1 block">Cleared for surgery</span>
                 </div>
 
-                <div className="instrument-panel p-4 font-mono border-l-4 border-l-[var(--color-status-atrisk)]">
-                    <span className="text-xs font-bold text-[var(--color-status-atrisk)] flex items-center gap-1.5">
-                        <span className="text-sm font-black">▲</span>
-                        <span>AT RISK</span>
-                    </span>
-                    <div className="text-3xl font-extrabold text-[var(--color-status-atrisk)] mt-1 font-mono">{atRiskCount}</div>
-                    <span className="text-[11px] text-[var(--color-text-muted)] mt-1 block">PM Overdue / Risk Flagged</span>
+                <div className="bg-subtle border border-border rounded p-4">
+                    <span className="text-caption font-medium text-status-atrisk-text block">At Risk</span>
+                    <div className="text-2xl font-bold text-status-atrisk-text mt-1 tabular-nums">{atRiskCount}</div>
+                    <span className="text-caption text-text-muted mt-1 block">Maintenance or secondary risk</span>
                 </div>
 
-                <div className="instrument-panel p-4 font-mono border-l-4 border-l-[var(--color-status-notready)]">
-                    <span className="text-xs font-bold text-[var(--color-status-notready)] flex items-center gap-1.5">
-                        <span className="text-sm font-black">✕</span>
-                        <span>NOT READY</span>
-                    </span>
-                    <div className="text-3xl font-extrabold text-[var(--color-status-notready)] mt-1 font-mono">{notReadyCount}</div>
-                    <span className="text-[11px] text-[var(--color-text-muted)] mt-1 block">Under Repair / Missing Asset</span>
+                <div className="bg-subtle border border-border rounded p-4">
+                    <span className="text-caption font-medium text-status-notready-text block">Not Ready</span>
+                    <div className="text-2xl font-bold text-status-notready-text mt-1 tabular-nums">{notReadyCount}</div>
+                    <span className="text-caption text-text-muted mt-1 block">Missing or unavailable equipment</span>
                 </div>
             </div>
         </div>
     );
 }
-

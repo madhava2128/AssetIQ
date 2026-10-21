@@ -14,30 +14,30 @@ export default function GlobalError({
     }, [error]);
 
     return (
-        <html lang="en" className="dark" data-theme="dark">
-            <body className="bg-[#0A1014] text-[#E1E8EC] min-h-screen flex items-center justify-center p-6 font-mono">
-                <div className="w-full max-w-lg bg-[#121B22] border border-[#2A3A46] rounded-xl p-6 shadow-2xl space-y-4">
-                    <div className="flex items-center gap-3 border-b border-[#2A3A46] pb-4">
-                        <div className="w-9 h-9 rounded bg-[#3A1414] border border-[#F87171] flex items-center justify-center font-bold text-[#F87171]">
-                            ⚠️
+        <html lang="en">
+            <body className="bg-page text-text-primary min-h-screen flex items-center justify-center p-6 font-sans">
+                <div className="w-full max-w-lg bg-panel border border-border rounded-lg p-6 space-y-4">
+                    <div className="flex items-center gap-3 border-b border-border pb-4">
+                        <div className="w-9 h-9 rounded bg-status-notready-bg border border-status-notready-solid flex items-center justify-center font-semibold text-status-notready-text">
+                            !
                         </div>
                         <div>
-                            <h1 className="text-base font-bold tracking-tight text-[#F87171]">
-                                SYSTEM RENDER FAULT DETECTED
+                            <h1 className="text-base font-semibold text-text-primary">
+                                An unexpected error occurred
                             </h1>
-                            <p className="text-[11px] text-[#8C9BA5]">
-                                Clinical Suite Telemetry Exception Handler
+                            <p className="text-xs text-text-muted">
+                                System application error handler
                             </p>
                         </div>
                     </div>
 
-                    <div className="p-3 bg-[#0A1014] border border-[#2A3A46] rounded font-mono text-xs text-[#E1E8EC] overflow-x-auto">
-                        <p className="font-bold text-[#F87171] mb-1">
+                    <div className="p-3 bg-subtle border border-border rounded text-xs text-text-primary overflow-x-auto">
+                        <p className="font-medium text-status-notready-text mb-1">
                             {error.name || 'Error'}: {error.message || 'An unexpected client-side error occurred.'}
                         </p>
                         {error.digest && (
-                            <p className="text-[10px] text-[#8C9BA5]">
-                                Digest ID: <code className="text-[#38BDF8]">{error.digest}</code>
+                            <p className="text-xs text-text-muted">
+                                Digest ID: <span className="text-text-secondary tabular-nums">{error.digest}</span>
                             </p>
                         )}
                     </div>
@@ -45,9 +45,9 @@ export default function GlobalError({
                     <div className="flex items-center gap-3 pt-2">
                         <button
                             onClick={() => reset()}
-                            className="flex-1 py-2 px-4 rounded bg-[#38BDF8] text-[#0A1014] font-bold text-xs hover:opacity-90 transition-opacity cursor-pointer text-center"
+                            className="flex-1 py-2 px-4 rounded bg-accent text-white font-medium text-xs hover:bg-accent-hover transition-colors cursor-pointer text-center"
                         >
-                            ↻ Retry Render Cycle
+                            Retry
                         </button>
                         <button
                             onClick={() => {
@@ -56,9 +56,9 @@ export default function GlobalError({
                                     window.location.href = '/login';
                                 }
                             }}
-                            className="flex-1 py-2 px-4 rounded bg-[#2A3A46] text-[#E1E8EC] font-bold text-xs hover:bg-[#3A4C5A] transition-colors cursor-pointer text-center border border-[#3A4C5A]"
+                            className="flex-1 py-2 px-4 rounded bg-panel text-text-primary font-medium text-xs hover:bg-subtle transition-colors cursor-pointer text-center border border-border-strong"
                         >
-                            Reset State & Return to Login
+                            Return to Login
                         </button>
                     </div>
                 </div>

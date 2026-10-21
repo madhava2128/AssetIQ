@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { TOKENS } from '@/lib/tokens';
 
 interface CapexOpexChartProps {
     assets: any[];
@@ -12,24 +13,27 @@ export default function CapexOpexChart({ assets, maintenanceRecords }: CapexOpex
     const categoryCosts: Record<string, { opex: number; capex: number }> = {};
 
     (assets || []).forEach(a => {
-        const cat = a.category || 'General';
+        let cat = a.category ? a.category.replace(/_/g, ' ') : 'General Medical';
+        cat = cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+
         if (!categoryCosts[cat]) {
             categoryCosts[cat] = { opex: 0, capex: 0 };
         }
-        // Estimated CAPEX value per asset unit in INR (e.g. ₹35,00,000 for Anesthesia, ₹25,00,000 for Ventilator)
         const estValue = cat.toLowerCase().includes('anesthesia') ? 3500000
                         : cat.toLowerCase().includes('ventilator') ? 2500000
                         : cat.toLowerCase().includes('monitor') ? 1000000
                         : cat.toLowerCase().includes('defibrillator') ? 1500000
+                        : cat.toLowerCase().includes('c-arm') ? 4500000
                         : 2000000;
         categoryCosts[cat].capex += estValue;
     });
 
     (maintenanceRecords || []).forEach(m => {
-        const cost = Number(m.cost || 0) * 80; // Convert USD base cost to INR equivalent
-        // Find asset category
+        const cost = Number(m.cost || 0);
         const asset = (assets || []).find(a => a.id === m.asset_id);
-        const cat = asset ? asset.category : 'General';
+        let cat = asset && asset.category ? asset.category.replace(/_/g, ' ') : 'General Medical';
+        cat = cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+
         if (!categoryCosts[cat]) {
             categoryCosts[cat] = { opex: 0, capex: 0 };
         }
@@ -37,64 +41,79 @@ export default function CapexOpexChart({ assets, maintenanceRecords }: CapexOpex
     });
 
     const data = Object.keys(categoryCosts).map(cat => ({
-        category: cat.length > 12 ? cat.substring(0, 10) + '...' : cat,
-        fullCategory: cat,
-        CAPEX: categoryCosts[cat].capex,
-        OPEX: categoryCosts[cat].opex
-    })).slice(0, 6);
+        category: cat,
+        shortCategory: cat.length > 14 ? cat.substring(0, 12) + '...' : cat,
+        'Asset Value': categoryCosts[cat].capex,
+        'Maintenance Cost': categoryCosts[cat].opex
+    })).slice(0, 5);
 
     return (
-        <div className="instrument-panel p-5 font-mono">
-            <div className="flex items-center justify-between mb-4 border-b border-[var(--color-border)] pb-3">
-                <h3 className="text-base font-bold text-[var(--color-text-primary)] font-sans">
-                    CAPEX Asset Value vs OPEX Maintenance Cost (₹ INR)
-                </h3>
-                <span className="text-xs text-[var(--color-text-muted)] font-mono border border-[var(--color-border)] px-2.5 py-0.5 rounded">
-                    Financial Telemetry
+        <div className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden flex flex-col justify-between">
+            <div className="panel-header-band flex items-center justify-between">
+                <div>
+                    <h3 className="text-body font-semibold text-text-primary">
+                        Equipment value vs maintenance expenditure
+                    </h3>
+                    <p className="text-caption text-text-secondary mt-0.5">
+                        Capital asset value compared against maintenance spending.
+                    </p>
+                </div>
+                <span className="text-caption text-text-muted">
+                    In ₹ Lakhs
                 </span>
             </div>
 
-            <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 25 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(143, 166, 163, 0.15)" />
-                        <XAxis
-                            dataKey="category"
-                            stroke="var(--color-text-muted)"
-                            tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                            interval={0}
-                            angle={-20}
-                            textAnchor="end"
-                        />
-                        <YAxis
-                            stroke="var(--color-text-muted)"
-                            tick={{ fill: 'var(--color-text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                            tickFormatter={(val) => `₹${(val / 100000).toFixed(0)}L`}
-                        />
-                        <Tooltip
-                            contentStyle={{
-                                backgroundColor: '#16262C',
-                                borderColor: 'rgba(143, 166, 163, 0.3)',
-                                borderRadius: '4px',
-                                color: '#E7EEEC',
-                                fontFamily: 'JetBrains Mono, monospace',
-                                fontSize: '12px'
-                            }}
-                            formatter={(value: any) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Amount']}
-                        />
-                        <Legend
-                            verticalAlign="top"
-                            height={36}
-                            formatter={(value) => (
-                                <span className="text-xs text-[var(--color-text-primary)] font-mono font-bold px-1">{value}</span>
-                            )}
-                        />
-                        <Bar dataKey="CAPEX" fill="var(--color-accent)" name="CAPEX (Asset Value)" radius={[2, 2, 0, 0]} />
-                        <Bar dataKey="OPEX" fill="var(--color-status-atrisk)" name="OPEX (Maintenance)" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+            <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className="h-60 w-full">
+                    {data.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-text-muted text-body">
+                            No expenditure data available.
+                        </div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data} margin={{ top: 5, right: 15, left: 10, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke={TOKENS.chart.gridline} />
+                                <XAxis
+                                    dataKey="shortCategory"
+                                    stroke={TOKENS.text.secondary}
+                                    tick={{ fill: TOKENS.text.secondary, fontSize: 11 }}
+                                />
+                                <YAxis
+                                    stroke={TOKENS.text.secondary}
+                                    tick={{ fill: TOKENS.text.secondary, fontSize: 11 }}
+                                    tickFormatter={(val) => `₹${(val / 100000).toFixed(0)}L`}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: TOKENS.panel.bg,
+                                        borderColor: TOKENS.panel.border,
+                                        borderRadius: '6px',
+                                        color: TOKENS.text.primary,
+                                        fontSize: '13px'
+                                    }}
+                                    formatter={(value: any, name: any) => [
+                                        `₹${Number(value).toLocaleString('en-IN')}`,
+                                        name
+                                    ]}
+                                />
+                                <Legend
+                                    verticalAlign="top"
+                                    height={32}
+                                    formatter={(value) => (
+                                        <span className="text-caption text-text-primary px-1 font-medium">{value}</span>
+                                    )}
+                                />
+                                <Bar dataKey="Asset Value" fill={TOKENS.chart.accent} radius={[2, 2, 0, 0]} barSize={16} />
+                                <Bar dataKey="Maintenance Cost" fill={TOKENS.chart.slateDark} radius={[2, 2, 0, 0]} barSize={16} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </div>
+
+                <p className="text-caption text-text-muted pt-2 border-t border-border mt-2">
+                    Compares the initial equipment asset investment against cumulative maintenance and servicing expenditure.
+                </p>
             </div>
         </div>
     );
 }
-

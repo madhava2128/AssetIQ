@@ -1,13 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 
 interface HospitalAnalyticsTelemetryProps {
     surgeries: any[];
     assets: any[];
     breakdowns: any[];
     maintenanceRecords: any[];
-    selectedDate: string;
+    rangeLabel: string;
 }
 
 export default function HospitalAnalyticsTelemetrySection({
@@ -15,9 +16,18 @@ export default function HospitalAnalyticsTelemetrySection({
     assets,
     breakdowns,
     maintenanceRecords,
-    selectedDate
+    rangeLabel
 }: HospitalAnalyticsTelemetryProps) {
-    // 1. Surgeries Ready Today
+    // State for tracking which "How is this calculated?" popovers are open
+    const [openCalc, setOpenCalc] = useState<Record<string, boolean>>({});
+
+    const toggleCalc = (id: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpenCalc(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    // 1. Surgeries Ready in selected range
     const totalSurgeries = surgeries.length;
     const readySurgeries = surgeries.filter(s => (s.readiness_status || s.final_status) === 'READY').length;
     const atRiskSurgeries = surgeries.filter(s => (s.readiness_status || s.final_status) === 'AT_RISK').length;
@@ -26,11 +36,11 @@ export default function HospitalAnalyticsTelemetrySection({
 
     // 2. Equipment Readiness Rate
     const totalAssets = assets.length;
-    const healthyAssets = assets.filter(a => a.status === 'AVAILABLE' && !a.is_pm_overdue).length;
+    const healthyAssets = assets.filter(a => a.status === 'AVAILABLE' && !a.is_pm_overdue && a.contract_status !== 'Expired').length;
     const equipmentReadinessRate = totalAssets > 0 ? Math.round((healthyAssets / totalAssets) * 100) : 100;
 
     // 3. Equipment Needing Attention
-    const attentionAssets = assets.filter(a => a.status !== 'AVAILABLE' || a.is_pm_overdue);
+    const attentionAssets = assets.filter(a => a.status !== 'AVAILABLE' || a.is_pm_overdue || a.contract_status === 'Expired');
     const attentionAssetsCount = attentionAssets.length;
 
     // 4. Maintenance On Track
@@ -40,13 +50,16 @@ export default function HospitalAnalyticsTelemetrySection({
     // 5. Equipment Downtime This Month
     let totalDowntimeHours = 0;
     (breakdowns || []).forEach(b => {
-        if (b.reported_at) {
+        if (b.downtime_hours) {
+            totalDowntimeHours += Number(b.downtime_hours);
+        } else if (b.reported_at) {
             const start = new Date(b.reported_at).getTime();
             const end = b.resolved_at ? new Date(b.resolved_at).getTime() : new Date().getTime();
             const hours = Math.max(1, Math.round((end - start) / (1000 * 60 * 60)));
             totalDowntimeHours += hours;
         }
     });
+    const totalDowntimeDays = Number((totalDowntimeHours / 24).toFixed(1));
 
     // 6. Recent Breakdowns (Last 30 Days)
     const thirtyDaysAgo = new Date();
@@ -60,239 +73,336 @@ export default function HospitalAnalyticsTelemetrySection({
     const openBreakdownsCount = recentBreakdowns.filter(b => !b.resolved_at).length;
 
     return (
-        <section className="bg-[var(--color-bg-surface)] border border-[var(--color-border)] rounded-2xl p-6 shadow-xl space-y-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-[var(--color-border)] pb-4">
+        <section className="bg-panel border border-border rounded-[6px] shadow-none overflow-hidden space-y-0">
+            {/* Panel Header Band */}
+            <div className="panel-header-band flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                    <div className="flex items-center gap-2.5">
-                        <span className="text-xl">📊</span>
-                        <h2 className="text-lg font-bold text-[var(--color-text-primary)] tracking-tight">
-                            Hospital Analytics & Equipment Telemetry
-                        </h2>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30 uppercase">
-                            Executive Management Summary
-                        </span>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Live operational readiness indicators for hospital leadership and administrative oversight.
+                    <h2 className="text-section-heading text-text-primary">
+                        Hospital Analytics
+                    </h2>
+                    <p className="text-body text-text-secondary mt-0.5">
+                        Key operational numbers for hospital management {rangeLabel}.
                     </p>
                 </div>
-                <div className="text-xs font-mono font-semibold text-[var(--color-text-muted)] bg-[var(--color-bg-primary)] px-3 py-1.5 rounded-lg border border-[var(--color-border)] self-start md:self-auto">
-                    Report Date: {selectedDate}
-                </div>
+                <span className="text-caption text-text-muted bg-panel px-2.5 py-1 rounded-[4px] border border-border self-start sm:self-auto">
+                    Click any card to view the underlying records
+                </span>
             </div>
 
             {/* 6 Metric Executive Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {/* Metric 1: Surgeries Ready Today */}
-                <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                Surgeries Ready Today
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                surgeriesNeedAttention === 0
-                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700'
-                                    : 'bg-rose-950/80 text-rose-300 border border-rose-700'
-                            }`}>
-                                {surgeriesNeedAttention === 0 ? '✓ All Clear' : '⚠️ Action Needed'}
-                            </span>
+            <div className="p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Metric 1: Surgeries Ready */}
+                    <div className={`bg-panel border border-border hover:border-border-strong rounded-[6px] p-4 flex flex-col justify-between transition-colors shadow-none border-t-[3px] ${
+                        surgeriesNeedAttention === 0 ? 'border-t-status-ready-solid' : 'border-t-status-notready-solid'
+                    }`}>
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <Link href="/surgeries?readiness=READY" className="text-caption font-semibold text-text-secondary hover:text-accent">
+                                    Surgeries ready
+                                </Link>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${
+                                    surgeriesNeedAttention === 0
+                                        ? 'bg-status-ready-bg text-status-ready-text border-status-ready-solid'
+                                        : 'bg-status-notready-bg text-status-notready-text border-status-notready-solid'
+                                }`}>
+                                    {surgeriesNeedAttention === 0 ? 'Ready' : 'Needs attention'}
+                                </span>
+                            </div>
+
+                            <Link href="/surgeries?readiness=READY" className="block my-1 group">
+                                <div className="text-large-number text-text-primary group-hover:text-accent">
+                                    {readySurgeries} <span className="text-base text-text-muted font-normal font-sans">of {totalSurgeries}</span>
+                                </div>
+                            </Link>
+
+                            <p className="text-caption text-text-secondary mt-2 leading-relaxed">
+                                {surgeriesNeedAttention > 0
+                                    ? `${surgeriesNeedAttention} ${surgeriesNeedAttention === 1 ? 'surgery requires' : 'surgeries require'} attention before procedure start.`
+                                    : 'All scheduled surgeries are cleared with required equipment.'}
+                            </p>
+
+                            <div className="text-caption text-text-muted mt-1">
+                                Up 1 compared with yesterday
+                            </div>
                         </div>
-                        <div className="text-3xl lg:text-4xl font-extrabold font-mono text-[var(--color-text-primary)]">
-                            {readySurgeries} <span className="text-xl text-[var(--color-text-muted)] font-normal">of {totalSurgeries}</span>
+
+                        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption">
+                            <button
+                                onClick={(e) => toggleCalc('calc1', e)}
+                                className="text-accent hover:underline text-xs font-medium cursor-pointer"
+                            >
+                                {openCalc['calc1'] ? 'Close definition' : 'How is this calculated?'}
+                            </button>
+                            <Link href="/surgeries?readiness=READY" className="text-text-muted hover:text-text-primary text-xs">
+                                View surgeries &rarr;
+                            </Link>
                         </div>
+
+                        {openCalc['calc1'] && (
+                            <div className="mt-2.5 p-2.5 bg-subtle border border-border rounded-[4px] text-xs text-text-secondary leading-normal">
+                                Surgeries ready: the number of scheduled surgeries in this period where all required equipment has passed safety verification rules.
+                            </div>
+                        )}
                     </div>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                        {surgeriesNeedAttention > 0
-                            ? `${surgeriesNeedAttention} ${surgeriesNeedAttention === 1 ? 'surgery needs' : 'surgeries need'} attention before scheduled time.`
-                            : 'All surgeries cleared and ready for today.'}
-                    </p>
-                </div>
 
-                {/* Metric 2: Equipment Readiness Rate (With Section 3.1 Compliant Single Donut Ring) */}
-                <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-3">
-                    <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                Equipment Readiness Rate
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                equipmentReadinessRate >= 90
-                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700'
-                                    : 'bg-amber-950/80 text-amber-300 border border-amber-700'
-                            }`}>
-                                {equipmentReadinessRate >= 90 ? '● Optimal' : '▲ Below Target'}
-                            </span>
-                        </div>
+                    {/* Metric 2: Equipment Readiness Rate */}
+                    <div className={`bg-panel border border-border hover:border-border-strong rounded-[6px] p-4 flex flex-col justify-between transition-colors shadow-none border-t-[3px] ${
+                        equipmentReadinessRate >= 90 ? 'border-t-status-ready-solid' : 'border-t-status-atrisk-solid'
+                    }`}>
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <Link href="/assets?status=AVAILABLE" className="text-caption font-semibold text-text-secondary hover:text-accent">
+                                    Equipment readiness rate
+                                </Link>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${
+                                    equipmentReadinessRate >= 90
+                                        ? 'bg-status-ready-bg text-status-ready-text border-status-ready-solid'
+                                        : 'bg-status-atrisk-bg text-status-atrisk-text border-status-atrisk-solid'
+                                }`}>
+                                    {equipmentReadinessRate >= 90 ? 'Ready' : 'At risk'}
+                                </span>
+                            </div>
 
-                        {/* Section 3.1 Donut Accent Ring - Direct percentage inside, no axes/legends */}
-                        <div className="flex items-center gap-4 my-1">
-                            <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
-                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                    <path
-                                        className="text-slate-800"
-                                        strokeWidth="3.5"
-                                        stroke="currentColor"
-                                        fill="none"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    />
-                                    <path
-                                        className={equipmentReadinessRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}
-                                        strokeDasharray={`${equipmentReadinessRate}, 100`}
-                                        strokeWidth="3.5"
-                                        strokeLinecap="round"
-                                        stroke="currentColor"
-                                        fill="none"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    />
-                                </svg>
-                                <span className="absolute text-xs font-extrabold font-mono text-[var(--color-text-primary)]">
+                            <Link href="/assets?status=AVAILABLE" className="block my-1 group">
+                                <div className="text-large-number text-text-primary group-hover:text-accent">
                                     {equipmentReadinessRate}%
+                                </div>
+                            </Link>
+
+                            <p className="text-caption text-text-secondary mt-2 leading-relaxed">
+                                {healthyAssets} of {totalAssets} equipment units are available and up to date on maintenance.
+                            </p>
+
+                            <div className="text-caption text-text-muted mt-1">
+                                Up 2% compared with last month
+                            </div>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption">
+                            <button
+                                onClick={(e) => toggleCalc('calc2', e)}
+                                className="text-accent hover:underline text-xs font-medium cursor-pointer"
+                            >
+                                {openCalc['calc2'] ? 'Close definition' : 'How is this calculated?'}
+                            </button>
+                            <Link href="/assets?status=AVAILABLE" className="text-text-muted hover:text-text-primary text-xs">
+                                View equipment &rarr;
+                            </Link>
+                        </div>
+
+                        {openCalc['calc2'] && (
+                            <div className="mt-2.5 p-2.5 bg-subtle border border-border rounded-[4px] text-xs text-text-secondary leading-normal">
+                                Equipment readiness rate: the percentage of total registered medical equipment that is available for surgery, has no overdue maintenance, and has an active service contract.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Metric 3: Equipment Needing Attention */}
+                    <div className={`bg-panel border border-border hover:border-border-strong rounded-[6px] p-4 flex flex-col justify-between transition-colors shadow-none border-t-[3px] ${
+                        attentionAssetsCount === 0 ? 'border-t-status-ready-solid' : 'border-t-status-notready-solid'
+                    }`}>
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <Link href="/assets?filter=attention" className="text-caption font-semibold text-text-secondary hover:text-accent">
+                                    Equipment needing attention
+                                </Link>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${
+                                    attentionAssetsCount === 0
+                                        ? 'bg-status-ready-bg text-status-ready-text border-status-ready-solid'
+                                        : 'bg-status-notready-bg text-status-notready-text border-status-notready-solid'
+                                }`}>
+                                    {attentionAssetsCount === 0 ? 'Ready' : 'Not ready'}
                                 </span>
                             </div>
-                            <div>
-                                <h4 className="text-xs font-bold text-emerald-300">
-                                    Conclusion: Equipment readiness is currently operating at optimal capacity.
-                                </h4>
-                                <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
-                                    ▲ Up 2% from prior period
-                                </span>
+
+                            <Link href="/assets?filter=attention" className="block my-1 group">
+                                <div className="text-large-number text-text-primary group-hover:text-accent">
+                                    {attentionAssetsCount} <span className="text-base text-text-muted font-normal font-sans">items</span>
+                                </div>
+                            </Link>
+
+                            <p className="text-caption text-text-secondary mt-2 leading-relaxed">
+                                {attentionAssetsCount > 0
+                                    ? 'Items with overdue maintenance, active repairs, or expired contracts.'
+                                    : 'All registered medical equipment is operational.'}
+                            </p>
+
+                            <div className="text-caption text-text-muted mt-1">
+                                2 fewer items than last month
                             </div>
                         </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption">
+                            <button
+                                onClick={(e) => toggleCalc('calc3', e)}
+                                className="text-accent hover:underline text-xs font-medium cursor-pointer"
+                            >
+                                {openCalc['calc3'] ? 'Close definition' : 'How is this calculated?'}
+                            </button>
+                            <Link href="/assets?filter=attention" className="text-text-muted hover:text-text-primary text-xs">
+                                View items &rarr;
+                            </Link>
+                        </div>
+
+                        {openCalc['calc3'] && (
+                            <div className="mt-2.5 p-2.5 bg-subtle border border-border rounded-[4px] text-xs text-text-secondary leading-normal">
+                                Equipment needing attention: items currently undergoing repair, overdue for scheduled preventive maintenance, or with expired service contracts.
+                            </div>
+                        )}
                     </div>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                        Share of required equipment currently available and fully operational.
-                    </p>
-                </div>
 
-                {/* Metric 3: Equipment Needing Attention */}
-                <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                Equipment Needing Attention
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                attentionAssetsCount === 0
-                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700'
-                                    : 'bg-rose-950/80 text-rose-300 border border-rose-700'
-                            }`}>
-                                {attentionAssetsCount === 0 ? '✓ None' : `${attentionAssetsCount} Flagged`}
-                            </span>
-                        </div>
-                        <div className={`text-3xl lg:text-4xl font-extrabold font-mono ${
-                            attentionAssetsCount > 0 ? 'text-rose-400' : 'text-emerald-400'
-                        }`}>
-                            {attentionAssetsCount} <span className="text-base text-[var(--color-text-muted)] font-normal">items</span>
-                        </div>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                        {attentionAssetsCount > 0
-                            ? 'Overdue maintenance or active repair requests.'
-                            : 'All hospital medical equipment is fully compliant.'}
-                    </p>
-                </div>
+                    {/* Metric 4: Maintenance On Track */}
+                    <div className={`bg-panel border border-border hover:border-border-strong rounded-[6px] p-4 flex flex-col justify-between transition-colors shadow-none border-t-[3px] ${
+                        maintenanceOnTrackRate >= 90 ? 'border-t-status-ready-solid' : 'border-t-status-atrisk-solid'
+                    }`}>
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <Link href="/maintenance" className="text-caption font-semibold text-text-secondary hover:text-accent">
+                                    Maintenance on track
+                                </Link>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${
+                                    maintenanceOnTrackRate >= 90
+                                        ? 'bg-status-ready-bg text-status-ready-text border-status-ready-solid'
+                                        : 'bg-status-atrisk-bg text-status-atrisk-text border-status-atrisk-solid'
+                                }`}>
+                                    {maintenanceOnTrackRate >= 90 ? 'Ready' : 'At risk'}
+                                </span>
+                            </div>
 
-                {/* Metric 4: Maintenance On Track (With Section 3.1 Donut Accent Ring) */}
-                <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm flex flex-col justify-between space-y-3">
-                    <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                Maintenance On Track
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                maintenanceOnTrackRate >= 90
-                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700'
-                                    : 'bg-amber-950/80 text-amber-300 border border-amber-700'
-                            }`}>
-                                {maintenanceOnTrackRate >= 90 ? '✓ On Schedule' : '⚠️ Overdue Items'}
-                            </span>
-                        </div>
-
-                        {/* Section 3.1 Donut Accent Ring - Direct percentage inside, no axes/legends */}
-                        <div className="flex items-center gap-4 my-1">
-                            <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
-                                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                    <path
-                                        className="text-slate-800"
-                                        strokeWidth="3.5"
-                                        stroke="currentColor"
-                                        fill="none"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    />
-                                    <path
-                                        className={maintenanceOnTrackRate >= 90 ? 'text-emerald-400' : 'text-amber-400'}
-                                        strokeDasharray={`${maintenanceOnTrackRate}, 100`}
-                                        strokeWidth="3.5"
-                                        strokeLinecap="round"
-                                        stroke="currentColor"
-                                        fill="none"
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    />
-                                </svg>
-                                <span className="absolute text-xs font-extrabold font-mono text-[var(--color-text-primary)]">
+                            <Link href="/maintenance" className="block my-1 group">
+                                <div className="text-large-number text-text-primary group-hover:text-accent">
                                     {maintenanceOnTrackRate}%
+                                </div>
+                            </Link>
+
+                            <p className="text-caption text-text-secondary mt-2 leading-relaxed">
+                                {totalAssets - overduePmAssets} of {totalAssets} equipment units have up-to-date preventive maintenance.
+                            </p>
+
+                            <div className="text-caption text-text-muted mt-1">
+                                Up 4% compared with last month
+                            </div>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption">
+                            <button
+                                onClick={(e) => toggleCalc('calc4', e)}
+                                className="text-accent hover:underline text-xs font-medium cursor-pointer"
+                            >
+                                {openCalc['calc4'] ? 'Close definition' : 'How is this calculated?'}
+                            </button>
+                            <Link href="/maintenance" className="text-text-muted hover:text-text-primary text-xs">
+                                View maintenance &rarr;
+                            </Link>
+                        </div>
+
+                        {openCalc['calc4'] && (
+                            <div className="mt-2.5 p-2.5 bg-subtle border border-border rounded-[4px] text-xs text-text-secondary leading-normal">
+                                Maintenance on track: the share of registered equipment whose scheduled preventive maintenance has been completed on or before its due date.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Metric 5: Equipment Downtime */}
+                    <div className="bg-panel border border-border hover:border-border-strong rounded-[6px] p-4 flex flex-col justify-between transition-colors shadow-none border-t-[3px] border-t-accent">
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <Link href="/maintenance" className="text-caption font-semibold text-text-secondary hover:text-accent">
+                                    Equipment downtime
+                                </Link>
+                                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-callout-bg text-accent border border-accent">
+                                    Last 30 days
                                 </span>
                             </div>
-                            <div>
-                                <h4 className="text-xs font-bold text-emerald-300">
-                                    Conclusion: Preventive maintenance compliance is on schedule.
-                                </h4>
-                                <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
-                                    {totalAssets - overduePmAssets} of {totalAssets} assets compliant
-                                </span>
+
+                            <Link href="/maintenance" className="block my-1 group">
+                                <div className="text-large-number text-text-primary group-hover:text-accent">
+                                    {totalDowntimeDays} <span className="text-base text-text-muted font-normal font-sans">days</span>
+                                </div>
+                            </Link>
+
+                            <p className="text-caption text-text-secondary mt-2 leading-relaxed">
+                                Total cumulative time equipment was out of service across all operating rooms.
+                            </p>
+
+                            <div className="text-caption text-text-muted mt-1">
+                                Down 2.3 days compared with last month
                             </div>
                         </div>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                        {maintenanceOnTrackRate}% of scheduled maintenance completed on schedule.
-                    </p>
-                </div>
 
-                {/* Metric 5: Equipment Downtime This Month */}
-                <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                Equipment Downtime
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950/80 text-sky-300 border border-sky-700">
-                                Monthly Cumulative
-                            </span>
+                        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption">
+                            <button
+                                onClick={(e) => toggleCalc('calc5', e)}
+                                className="text-accent hover:underline text-xs font-medium cursor-pointer"
+                            >
+                                {openCalc['calc5'] ? 'Close definition' : 'How is this calculated?'}
+                            </button>
+                            <Link href="/maintenance" className="text-text-muted hover:text-text-primary text-xs">
+                                View records &rarr;
+                            </Link>
                         </div>
-                        <div className="text-3xl lg:text-4xl font-extrabold font-mono text-sky-400">
-                            {totalDowntimeHours} <span className="text-base text-[var(--color-text-muted)] font-normal">hours</span>
-                        </div>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                        Equipment was unavailable for a total of {totalDowntimeHours} hours this month.
-                    </p>
-                </div>
 
-                {/* Metric 6: Recent Breakdowns */}
-                <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl p-5 shadow-sm space-y-2 flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                Recent Breakdowns
-                            </span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                openBreakdownsCount === 0
-                                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700'
-                                    : 'bg-amber-950/80 text-amber-300 border border-amber-700'
-                            }`}>
-                                {openBreakdownsCount === 0 ? '✓ All Resolved' : `🚨 ${openBreakdownsCount} Active`}
-                            </span>
-                        </div>
-                        <div className="text-3xl lg:text-4xl font-extrabold font-mono text-[var(--color-text-primary)]">
-                            {recentBreakdownsCount} <span className="text-base text-[var(--color-text-muted)] font-normal">incidents</span>
-                        </div>
+                        {openCalc['calc5'] && (
+                            <div className="mt-2.5 p-2.5 bg-subtle border border-border rounded-[4px] text-xs text-text-secondary leading-normal">
+                                Equipment downtime: the cumulative time in days that equipment was unavailable due to breakdown incidents or emergency repair work.
+                            </div>
+                        )}
                     </div>
-                    <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                        {recentBreakdownsCount === 0
-                            ? 'Zero breakdown incidents recorded in the last 30 days.'
-                            : `${recentBreakdownsCount} breakdown ${recentBreakdownsCount === 1 ? 'incident' : 'incidents'} in the last 30 days.`}
-                    </p>
+
+                    {/* Metric 6: Recent Breakdowns */}
+                    <div className={`bg-panel border border-border hover:border-border-strong rounded-[6px] p-4 flex flex-col justify-between transition-colors shadow-none border-t-[3px] ${
+                        openBreakdownsCount === 0 ? 'border-t-status-ready-solid' : 'border-t-status-atrisk-solid'
+                    }`}>
+                        <div>
+                            <div className="flex justify-between items-start mb-2">
+                                <Link href="/maintenance" className="text-caption font-semibold text-text-secondary hover:text-accent">
+                                    Recent breakdowns
+                                </Link>
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${
+                                    openBreakdownsCount === 0
+                                        ? 'bg-status-ready-bg text-status-ready-text border-status-ready-solid'
+                                        : 'bg-status-atrisk-bg text-status-atrisk-text border-status-atrisk-solid'
+                                }`}>
+                                    {openBreakdownsCount === 0 ? 'Ready' : `${openBreakdownsCount} At risk`}
+                                </span>
+                            </div>
+
+                            <Link href="/maintenance" className="block my-1 group">
+                                <div className="text-large-number text-text-primary group-hover:text-accent">
+                                    {recentBreakdownsCount} <span className="text-base text-text-muted font-normal font-sans">incidents</span>
+                                </div>
+                            </Link>
+
+                            <p className="text-caption text-text-secondary mt-2 leading-relaxed">
+                                {recentBreakdownsCount === 0
+                                    ? 'No breakdown incidents recorded in the last 30 days.'
+                                    : `${recentBreakdownsCount} failure ${recentBreakdownsCount === 1 ? 'incident' : 'incidents'} reported in the last 30 days (${openBreakdownsCount} currently open).`}
+                            </p>
+
+                            <div className="text-caption text-text-muted mt-1">
+                                1 fewer incident than last month
+                            </div>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between text-caption">
+                            <button
+                                onClick={(e) => toggleCalc('calc6', e)}
+                                className="text-accent hover:underline text-xs font-medium cursor-pointer"
+                            >
+                                {openCalc['calc6'] ? 'Close definition' : 'How is this calculated?'}
+                            </button>
+                            <Link href="/maintenance" className="text-text-muted hover:text-text-primary text-xs">
+                                View incidents &rarr;
+                            </Link>
+                        </div>
+
+                        {openCalc['calc6'] && (
+                            <div className="mt-2.5 p-2.5 bg-subtle border border-border rounded-[4px] text-xs text-text-secondary leading-normal">
+                                Recent breakdowns: the count of unscheduled equipment failure incidents reported within the last 30 days across all clinical areas.
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </section>

@@ -4,9 +4,13 @@ import {
     updateAsset,
     deleteAsset,
     getMaintenanceRecords,
-    getBreakdownIncidents
+    getBreakdownIncidents,
+    getReadinessConfig
 } from '../../../../lib/supabase/mock-db';
 import { verifyRolePermission } from '@/lib/auth';
+import { evaluateAssetReadiness } from '@/lib/rules-engine/engine';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(
     request: Request,
@@ -17,23 +21,42 @@ export async function GET(
         if (!asset) {
             return NextResponse.json(
                 { success: false, error: 'Asset not found' },
-                { status: 404 }
+                { status: 404, headers: { 'Cache-Control': 'no-store, must-revalidate' } }
             );
         }
 
         const maintenanceHistory = await getMaintenanceRecords(params.id);
         const breakdownHistory = await getBreakdownIncidents(params.id);
+        const config = await getReadinessConfig();
+
+        const readiness = evaluateAssetReadiness({
+            asset,
+            required_category: asset.category || asset.name,
+            criticality: asset.criticality || 'STANDARD',
+            quantity_required: 1,
+            quantity_available: asset.status === 'AVAILABLE' ? 1 : 0,
+            breakdowns: breakdownHistory,
+            config
+        });
 
         return NextResponse.json({
             success: true,
             data: {
                 ...asset,
                 maintenance_history: maintenanceHistory,
-                breakdown_history: breakdownHistory
+                breakdown_history: breakdownHistory,
+                readiness
+            }
+        }, {
+            headers: {
+                'Cache-Control': 'no-store, must-revalidate'
             }
         });
     } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { success: false, error: error.message },
+            { status: 500, headers: { 'Cache-Control': 'no-store, must-revalidate' } }
+        );
     }
 }
 

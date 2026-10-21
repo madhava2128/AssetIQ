@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { formatRuleMessage, getReadinessStatusTheme } from '@/lib/formatters';
 
 interface ClinicalManifestViewProps {
     surgeries: any[];
@@ -22,165 +23,144 @@ export default function ClinicalManifestView({
 
     const activeSurgery = surgeries.find(s => s.id === selectedSurgeryId) || surgeries[0];
 
-    const getStatusGlyph = (status: string) => {
-        const st = (status || '').toUpperCase();
-        if (st === 'NOT_READY') return { glyph: '✕', text: 'NOT READY', class: 'text-[var(--color-status-notready)]', bgClass: 'bg-[var(--color-status-notready-bg)] border-[var(--color-status-notready)]' };
-        if (st === 'AT_RISK') return { glyph: '▲', text: 'AT RISK', class: 'text-[var(--color-status-atrisk)]', bgClass: 'bg-[var(--color-status-atrisk-bg)] border-[var(--color-status-atrisk)]' };
-        return { glyph: '●', text: 'READY', class: 'text-[var(--color-status-ready)]', bgClass: 'bg-[var(--color-status-ready-bg)] border-[var(--color-status-ready)]' };
-    };
-
     return (
-        <div className="instrument-panel rounded-lg overflow-hidden border border-[var(--color-border)] text-[var(--color-text-primary)]">
-            {/* Split Manifest Layout: Left Rail + Main Panel */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
-                
-                {/* Left Rail: Persistent Dense Surgeries Manifest */}
-                <div className="lg:col-span-4 border-r border-[var(--color-border)] bg-[var(--color-bg-primary)] p-4 flex flex-col">
-                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--color-border)] font-mono">
-                        <span className="text-xs font-bold text-[var(--color-text-muted)]">
+        <div className="bg-panel border border-border rounded overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[500px]">
+                {/* Left Rail: Surgeries List */}
+                <div className="lg:col-span-4 border-r border-border bg-subtle p-4 flex flex-col">
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+                        <span className="text-body font-semibold text-text-primary">
                             Surgeries ({surgeries.length})
                         </span>
-                        <span className="text-xs text-[var(--color-accent)] font-semibold">
+                        <span className="text-caption text-text-muted tabular-nums">
                             {selectedDate}
                         </span>
                     </div>
 
-                    <div className="space-y-1.5 overflow-y-auto max-h-[520px] pr-1">
+                    <div className="space-y-1 overflow-y-auto max-h-[460px] pr-1">
                         {surgeries.map(s => {
-                            const statusInfo = getStatusGlyph(s.readiness_status || s.final_status);
+                            const status = (s.readiness_status || s.final_status || 'READY').toUpperCase();
+                            const theme = getReadinessStatusTheme(status);
                             const isSelected = s.id === (activeSurgery?.id);
 
                             return (
                                 <button
                                     key={s.id}
                                     onClick={() => setSelectedSurgeryId(s.id)}
-                                    className={`w-full text-left p-2.5 rounded border transition-all flex items-center justify-between font-mono text-xs ${
+                                    className={`w-full text-left p-2.5 rounded text-table flex items-center justify-between ${
                                         isSelected
-                                            ? 'bg-[var(--color-bg-surface)] border-[var(--color-accent)] text-[var(--color-text-primary)]'
-                                            : 'border-transparent hover:bg-[var(--color-bg-surface)]/60 text-[var(--color-text-muted)]'
+                                            ? 'bg-accent-subtle border border-accent text-text-primary'
+                                            : 'hover:bg-panel text-text-primary'
                                     }`}
                                 >
-                                    <div className="flex items-center gap-2 truncate">
-                                        <span className={`font-bold text-sm ${statusInfo.class}`}>
-                                            {statusInfo.glyph}
-                                        </span>
-                                        <span className="font-bold text-[var(--color-text-primary)]">{s.operating_room || 'OT'}</span>
-                                        <span className="truncate text-[var(--color-text-muted)]">| {s.surgery_code}</span>
+                                    <div className="truncate pr-2">
+                                        <div className="font-medium text-text-primary truncate">
+                                            {s.operating_room || 'OT'} — {s.procedure_name}
+                                        </div>
+                                        <div className="text-caption text-text-muted tabular-nums">
+                                            {s.surgery_code} · {s.scheduled_start_time ? s.scheduled_start_time.split('T')[1]?.substring(0, 5) : '08:00'}
+                                        </div>
                                     </div>
-                                    <span className="text-[10px] opacity-80">{s.scheduled_start_time ? s.scheduled_start_time.split('T')[1]?.substring(0, 5) : '08:00'}</span>
+                                    <span className={`px-2 py-0.5 text-xs font-medium rounded shrink-0 ${theme.badgeClass}`}>
+                                        {theme.label}
+                                    </span>
                                 </button>
                             );
                         })}
                     </div>
                 </div>
 
-
-                {/* Main Panel: Manifest / Checklist View for Selected Surgery */}
-                <div className="lg:col-span-8 p-5 bg-[var(--color-bg-surface)] flex flex-col justify-between">
+                {/* Main Panel: Manifest Details */}
+                <div className="lg:col-span-8 p-5 bg-panel flex flex-col justify-between">
                     {activeSurgery ? (
                         <div className="space-y-5">
-                            {/* Surgery Header Readout */}
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] pb-3 font-mono">
+                            {/* Header */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
                                 <div>
-                                    <div className="text-xs text-[var(--color-text-muted)]">
-                                        <span>{activeSurgery.operating_room}</span>
-                                        <span className="mx-2 text-[var(--color-border)]">|</span>
-                                        <span>{activeSurgery.surgery_code}</span>
-                                        <span className="mx-2 text-[var(--color-border)]">|</span>
-                                        <span>{activeSurgery.scheduled_start_time ? activeSurgery.scheduled_start_time.split('T')[1]?.substring(0, 5) : '10:00'}</span>
-                                        <span className="mx-2 text-[var(--color-border)]">|</span>
+                                    <h3 className="text-section-heading text-text-primary">
+                                        {activeSurgery.procedure_name}
+                                    </h3>
+                                    <div className="text-caption text-text-secondary mt-1 space-x-2 tabular-nums">
+                                        <span>Room: {activeSurgery.operating_room}</span>
+                                        <span>·</span>
+                                        <span>Code: {activeSurgery.surgery_code}</span>
+                                        <span>·</span>
                                         <span>Surgeon: {activeSurgery.surgeon_name}</span>
                                     </div>
-                                    <h2 className="text-lg font-bold text-[var(--color-text-primary)] mt-1 font-sans">
-                                        {activeSurgery.procedure_name}
-                                    </h2>
                                 </div>
                                 <Link
                                     href={`/surgeries/${activeSurgery.id}`}
-                                    className="px-3 py-1.5 bg-[var(--color-accent-bg)] text-[var(--color-accent)] border border-[var(--color-accent)] rounded font-mono text-xs font-bold hover:opacity-90 transition-opacity"
+                                    className="bg-accent hover:bg-accent-hover text-white px-3 py-1.5 rounded text-caption font-medium"
                                 >
-                                    Full Surgery View
+                                    View surgery details
                                 </Link>
                             </div>
 
-                            {/* Full-Width Status Strip (The single bold moment per surgery view with state transition) */}
+                            {/* Readiness Summary Callout */}
                             {(() => {
-                                const statusInfo = getStatusGlyph(activeSurgery.readiness_status || activeSurgery.final_status);
-                                const worstRule = activeSurgery.worst_rule_fired || 'RULE_7_ALL_CHECKS_PASSED';
+                                const status = (activeSurgery.readiness_status || activeSurgery.final_status || 'READY').toUpperCase();
+                                const theme = getReadinessStatusTheme(status);
+                                const worstRule = activeSurgery.worst_rule_fired;
+                                const ruleText = worstRule && worstRule !== 'RULE_7_ALL_CHECKS_PASSED'
+                                    ? formatRuleMessage(worstRule)
+                                    : 'All required equipment has been verified and cleared for surgery.';
 
                                 return (
-                                    <div className={`p-4 rounded border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 font-mono transition-all duration-300 ease-in-out ${statusInfo.bgClass}`}>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`text-3xl font-black ${statusInfo.class}`}>
-                                                {statusInfo.glyph}
-                                            </span>
-                                            <div>
-                                                <div className="text-xs text-[var(--color-text-muted)] font-semibold">
-                                                    Readiness Status
-                                                </div>
-                                                <div className={`text-2xl font-black tracking-tight font-mono ${statusInfo.class}`}>
-                                                    {statusInfo.text}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="text-left md:text-right border-t md:border-t-0 border-[var(--color-border)] pt-2 md:pt-0 w-full md:w-auto">
-                                            <div className="text-xs text-[var(--color-text-muted)] font-semibold">
-                                                Triggering Rule
-                                            </div>
-                                            <div className="text-xs font-bold font-mono text-[var(--color-text-primary)]">
-                                                {worstRule}
-                                            </div>
+                                    <div className={`p-4 rounded border flex items-center justify-between gap-4 ${theme.bannerClass}`}>
+                                        <div>
+                                            <div className="text-caption font-medium opacity-80">Readiness status</div>
+                                            <div className="text-lg font-bold mt-0.5">{theme.label}</div>
+                                            <p className="text-caption mt-1">{ruleText}</p>
                                         </div>
                                     </div>
                                 );
                             })()}
 
-                            {/* Manifest Equipment Checklist (Dot-Leader Rows) */}
+                            {/* Equipment Table */}
                             <div>
-                                <div className="flex items-center justify-between font-mono text-xs font-bold text-[var(--color-text-muted)] border-b border-[var(--color-border)] pb-2 mb-3">
-                                    <span>Equipment Manifest</span>
-                                    <span>Status</span>
-                                </div>
-
-                                <div className="space-y-3 font-mono text-xs">
-                                    {((activeSurgery.assessment?.asset_assessments) || [
-                                        { required_category: 'Anesthesia Machine', asset_tag: 'AST-001', criticality: 'CRITICAL', status: 'AT_RISK', rule_fired: 'RULE_4' },
-                                        { required_category: 'Ventilator', asset_tag: 'AST-002', criticality: 'CRITICAL', status: 'READY', rule_fired: 'RULE_7' },
-                                        { required_category: 'Electrosurgical Unit', asset_tag: 'AST-003', criticality: 'HIGH', status: 'READY', rule_fired: 'RULE_7' }
-                                    ]).map((item: any, idx: number) => {
-                                        const itemStatus = getStatusGlyph(item.status);
-                                        return (
-                                            <div key={idx} className="dot-leader-row font-mono text-xs">
-                                                <div className="flex items-center gap-2 truncate shrink-0 max-w-[50%]">
-                                                    <span className="font-bold text-[var(--color-text-primary)]">{item.required_category}</span>
-                                                    <span className="text-[var(--color-text-muted)] text-[11px]">[{item.asset_tag || 'UNASSIGNED'}]</span>
-                                                </div>
-
-                                                {/* Dotted Leader Line */}
-                                                <div className="dot-leader-fill"></div>
-
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <span className="text-[10px] text-[var(--color-text-muted)] font-semibold mr-1">{item.criticality}</span>
-                                                    <span className={`font-bold flex items-center gap-1.5 ${itemStatus.class}`}>
-                                                        <span className="text-sm font-black">{itemStatus.glyph}</span>
-                                                        <span>{itemStatus.text}</span>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                <h4 className="text-body font-semibold text-text-primary mb-2">Required equipment</h4>
+                                <div className="border border-border rounded overflow-hidden">
+                                    <table className="w-full text-left text-table">
+                                        <thead className="bg-subtle text-text-secondary border-b border-border">
+                                            <tr>
+                                                <th className="p-2.5 font-medium">Equipment category</th>
+                                                <th className="p-2.5 font-medium">Assigned asset</th>
+                                                <th className="p-2.5 font-medium">Criticality</th>
+                                                <th className="p-2.5 font-medium">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {((activeSurgery.assessment?.asset_assessments) || [
+                                                { required_category: 'Anesthesia Machine', asset_tag: 'AST-001', criticality: 'Critical', status: 'AT_RISK' },
+                                                { required_category: 'Ventilator', asset_tag: 'AST-002', criticality: 'Critical', status: 'READY' },
+                                                { required_category: 'Electrosurgical Unit', asset_tag: 'AST-003', criticality: 'Important', status: 'READY' }
+                                            ]).map((item: any, idx: number) => {
+                                                const itemTheme = getReadinessStatusTheme(item.status);
+                                                return (
+                                                    <tr key={idx} className="hover:bg-subtle">
+                                                        <td className="p-2.5 font-medium text-text-primary">{item.required_category}</td>
+                                                        <td className="p-2.5 text-text-secondary tabular-nums">{item.asset_tag || 'Unassigned'}</td>
+                                                        <td className="p-2.5 text-text-secondary">{item.criticality}</td>
+                                                        <td className="p-2.5">
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${itemTheme.badgeClass}`}>
+                                                                {itemTheme.label}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center text-[var(--color-text-muted)] font-mono text-xs py-12">
-                            Select a surgery from the left manifest rail to inspect equipment readiness.
+                        <div className="text-center text-text-muted text-body py-12">
+                            Select a surgery from the left list to view equipment readiness.
                         </div>
                     )}
-
                 </div>
             </div>
         </div>
     );
 }
-

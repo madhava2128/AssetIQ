@@ -1874,6 +1874,304 @@ const initialSurgeries = [
         "scheduled_end_time": "2026-09-29T21:44:00Z",
         "surgeon_name": "Dr. Meera Nair",
         "status": "SCHEDULED"
+    },
+    // October & November 2026 Demo Surgeries
+    {
+        "id": "b0000000-0000-0000-0000-000000000020",
+        "surgery_code": "SURG-2026-020",
+        "patient_id": "PAT-2020",
+        "procedure_name": "Laparoscopic Appendectomy",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-1",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-05T09:00:00+05:30",
+        "scheduled_end_time": "2026-10-05T11:00:00+05:30",
+        "surgeon_name": "Dr. Ananya Sharma",
+        "status": "COMPLETED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000021",
+        "surgery_code": "SURG-2026-021",
+        "patient_id": "PAT-2021",
+        "procedure_name": "Total Knee Replacement",
+        "surgery_type": "ORTHOPEDIC",
+        "operating_room": "OR-2",
+        "department": "Orthopedics",
+        "scheduled_start_time": "2026-10-08T10:00:00+05:30",
+        "scheduled_end_time": "2026-10-08T13:00:00+05:30",
+        "surgeon_name": "Dr. Vikram Malhotra",
+        "status": "COMPLETED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000022",
+        "surgery_code": "SURG-2026-022",
+        "patient_id": "PAT-2022",
+        "procedure_name": "Elective Inguinal Hernia Repair",
+        "surgery_type": "GENERAL_SURGERY",
+        "operating_room": "OR-3",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-12T14:00:00+05:30",
+        "scheduled_end_time": "2026-10-12T16:00:00+05:30",
+        "surgeon_name": "Dr. Meera Nair",
+        "status": "COMPLETED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000023",
+        "surgery_code": "SURG-2026-023",
+        "patient_id": "PAT-2023",
+        "procedure_name": "Cardiac Valve Repair",
+        "surgery_type": "CARDIAC",
+        "operating_room": "OR-5",
+        "department": "Cardiology",
+        "scheduled_start_time": "2026-10-15T11:00:00+05:30",
+        "scheduled_end_time": "2026-10-15T15:00:00+05:30",
+        "surgeon_name": "Dr. Priya Deshmukh",
+        "status": "CANCELLED"
+    },
+    // TODAY: 19 October 2026 (4 procedures demonstrating +1 more in Month view & distinct ORs in Day view)
+    {
+        "id": "b0000000-0000-0000-0000-000000000024",
+        "surgery_code": "SURG-2026-024",
+        "patient_id": "PAT-2024",
+        "procedure_name": "Laparoscopic Cholecystectomy",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-1",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-19T08:30:00+05:30",
+        "scheduled_end_time": "2026-10-19T11:00:00+05:30",
+        "surgeon_name": "Dr. Ananya Sharma",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000025",
+        "surgery_code": "SURG-2026-025",
+        "patient_id": "PAT-2025",
+        "procedure_name": "Total Knee Arthroplasty",
+        "surgery_type": "ORTHOPEDIC",
+        "operating_room": "OR-2",
+        "department": "Orthopedics",
+        "scheduled_start_time": "2026-10-19T09:00:00+05:30",
+        "scheduled_end_time": "2026-10-19T12:30:00+05:30",
+        "surgeon_name": "Dr. Vikram Malhotra",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000026",
+        "surgery_code": "SURG-2026-026",
+        "patient_id": "PAT-2026",
+        "procedure_name": "Coronary Artery Bypass Graft",
+        "surgery_type": "CARDIAC",
+        "operating_room": "OR-3",
+        "department": "Cardiology",
+        "scheduled_start_time": "2026-10-19T10:00:00+05:30",
+        "scheduled_end_time": "2026-10-19T13:30:00+05:30",
+        "surgeon_name": "Dr. Priya Deshmukh",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000027",
+        "surgery_code": "SURG-2026-027",
+        "patient_id": "PAT-2027",
+        "procedure_name": "Lumbar Spinal Fusion",
+        "surgery_type": "NEUROSURGERY",
+        "operating_room": "OR-4",
+        "department": "Neurosurgery",
+        "scheduled_start_time": "2026-10-19T14:00:00+05:30",
+        "scheduled_end_time": "2026-10-19T17:30:00+05:30",
+        "surgeon_name": "Dr. Rajesh Kulkarni",
+        "status": "SCHEDULED"
+    },
+    // Remainder of current week
+    {
+        "id": "b0000000-0000-0000-0000-000000000028",
+        "surgery_code": "SURG-2026-028",
+        "patient_id": "PAT-2028",
+        "procedure_name": "Laparoscopic Inguinal Hernia",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-1",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-20T09:00:00+05:30",
+        "scheduled_end_time": "2026-10-20T11:30:00+05:30",
+        "surgeon_name": "Dr. Ananya Sharma",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000029",
+        "surgery_code": "SURG-2026-029",
+        "patient_id": "PAT-2029",
+        "procedure_name": "Carotid Endarterectomy",
+        "surgery_type": "GENERAL_SURGERY",
+        "operating_room": "OR-5",
+        "department": "Vascular Surgery",
+        "scheduled_start_time": "2026-10-20T13:00:00+05:30",
+        "scheduled_end_time": "2026-10-20T15:30:00+05:30",
+        "surgeon_name": "Dr. Sanjay Gupta",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000030",
+        "surgery_code": "SURG-2026-030",
+        "patient_id": "PAT-2030",
+        "procedure_name": "Total Hip Replacement",
+        "surgery_type": "ORTHOPEDIC",
+        "operating_room": "OR-2",
+        "department": "Orthopedics",
+        "scheduled_start_time": "2026-10-21T08:30:00+05:30",
+        "scheduled_end_time": "2026-10-21T11:30:00+05:30",
+        "surgeon_name": "Dr. Vikram Malhotra",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000031",
+        "surgery_code": "SURG-2026-031",
+        "patient_id": "PAT-2031",
+        "procedure_name": "Thyroidectomy & Neck Dissection",
+        "surgery_type": "GENERAL_SURGERY",
+        "operating_room": "OR-3",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-21T12:00:00+05:30",
+        "scheduled_end_time": "2026-10-21T14:30:00+05:30",
+        "surgeon_name": "Dr. Meera Nair",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000032",
+        "surgery_code": "SURG-2026-032",
+        "patient_id": "PAT-2032",
+        "procedure_name": "Craniotomy Tumor Resection",
+        "surgery_type": "NEUROSURGERY",
+        "operating_room": "OR-4",
+        "department": "Neurosurgery",
+        "scheduled_start_time": "2026-10-22T09:00:00+05:30",
+        "scheduled_end_time": "2026-10-22T13:00:00+05:30",
+        "surgeon_name": "Dr. Rajesh Kulkarni",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000033",
+        "surgery_code": "SURG-2026-033",
+        "patient_id": "PAT-2033",
+        "procedure_name": "Pediatric Strabismus Surgery",
+        "surgery_type": "GENERAL_SURGERY",
+        "operating_room": "OR-6",
+        "department": "Pediatric Surgery",
+        "scheduled_start_time": "2026-10-23T10:00:00+05:30",
+        "scheduled_end_time": "2026-10-23T12:30:00+05:30",
+        "surgeon_name": "Dr. Sanjay Gupta",
+        "status": "SCHEDULED"
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000034",
+        "surgery_code": "SURG-2026-034",
+        "patient_id": "PAT-2034",
+        "procedure_name": "Emergency Appendectomy",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-1",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-23T14:00:00+05:30",
+        "scheduled_end_time": "2026-10-23T16:30:00+05:30",
+        "surgeon_name": "Dr. Ananya Sharma",
+        "status": "CANCELLED"
+    },
+    // Late October & November (Scheduled in advance - Not yet checked)
+    {
+        "id": "b0000000-0000-0000-0000-000000000035",
+        "surgery_code": "SURG-2026-035",
+        "patient_id": "PAT-2035",
+        "procedure_name": "Robotic Prostatectomy",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-5",
+        "department": "Urology",
+        "scheduled_start_time": "2026-10-26T08:30:00+05:30",
+        "scheduled_end_time": "2026-10-26T11:30:00+05:30",
+        "surgeon_name": "Dr. Sanjay Gupta",
+        "status": "SCHEDULED",
+        "readiness_checked": false
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000036",
+        "surgery_code": "SURG-2026-036",
+        "patient_id": "PAT-2036",
+        "procedure_name": "Spinal Decompression",
+        "surgery_type": "NEUROSURGERY",
+        "operating_room": "OR-4",
+        "department": "Neurosurgery",
+        "scheduled_start_time": "2026-10-27T09:00:00+05:30",
+        "scheduled_end_time": "2026-10-27T12:00:00+05:30",
+        "surgeon_name": "Dr. Rajesh Kulkarni",
+        "status": "SCHEDULED",
+        "readiness_checked": false
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000037",
+        "surgery_code": "SURG-2026-037",
+        "patient_id": "PAT-2037",
+        "procedure_name": "Aortic Valve Replacement",
+        "surgery_type": "CARDIAC",
+        "operating_room": "OR-3",
+        "department": "Cardiology",
+        "scheduled_start_time": "2026-10-28T10:00:00+05:30",
+        "scheduled_end_time": "2026-10-28T13:30:00+05:30",
+        "surgeon_name": "Dr. Priya Deshmukh",
+        "status": "SCHEDULED",
+        "readiness_checked": false
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000038",
+        "surgery_code": "SURG-2026-038",
+        "patient_id": "PAT-2038",
+        "procedure_name": "Laparoscopic Sleeve Gastrectomy",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-1",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-10-30T11:00:00+05:30",
+        "scheduled_end_time": "2026-10-30T13:30:00+05:30",
+        "surgeon_name": "Dr. Ananya Sharma",
+        "status": "SCHEDULED",
+        "readiness_checked": false
+    },
+    // Next two weeks: November 2026
+    {
+        "id": "b0000000-0000-0000-0000-000000000039",
+        "surgery_code": "SURG-2026-039",
+        "patient_id": "PAT-2039",
+        "procedure_name": "Anterior Cervical Discectomy",
+        "surgery_type": "NEUROSURGERY",
+        "operating_room": "OR-4",
+        "department": "Neurosurgery",
+        "scheduled_start_time": "2026-11-02T09:00:00+05:30",
+        "scheduled_end_time": "2026-11-02T12:00:00+05:30",
+        "surgeon_name": "Dr. Rajesh Kulkarni",
+        "status": "SCHEDULED",
+        "readiness_checked": false
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000040",
+        "surgery_code": "SURG-2026-040",
+        "patient_id": "PAT-2040",
+        "procedure_name": "Revision Knee Arthroplasty",
+        "surgery_type": "ORTHOPEDIC",
+        "operating_room": "OR-2",
+        "department": "Orthopedics",
+        "scheduled_start_time": "2026-11-04T10:00:00+05:30",
+        "scheduled_end_time": "2026-11-04T13:00:00+05:30",
+        "surgeon_name": "Dr. Vikram Malhotra",
+        "status": "SCHEDULED",
+        "readiness_checked": false
+    },
+    {
+        "id": "b0000000-0000-0000-0000-000000000041",
+        "surgery_code": "SURG-2026-041",
+        "patient_id": "PAT-2041",
+        "procedure_name": "Laparoscopic Fundoplication",
+        "surgery_type": "LAPAROSCOPIC",
+        "operating_room": "OR-1",
+        "department": "General Surgery",
+        "scheduled_start_time": "2026-11-06T08:30:00+05:30",
+        "scheduled_end_time": "2026-11-06T11:00:00+05:30",
+        "surgeon_name": "Dr. Ananya Sharma",
+        "status": "SCHEDULED",
+        "readiness_checked": false
     }
 ];
 
@@ -2237,12 +2535,233 @@ const initialSurgeryRequiredAssets = [
         "criticality": "IMPORTANT",
         "quantity": 1,
         "is_manual_override": false
+    },
+    // October 2026 Required Assets
+    // Surgery 24 (Today 19 Oct - OR-1 - READY)
+    {
+        "id": "c0000000-0000-0000-0000-000000000050",
+        "surgery_id": "b0000000-0000-0000-0000-000000000024",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000001",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000051",
+        "surgery_id": "b0000000-0000-0000-0000-000000000024",
+        "required_category": "LAPAROSCOPIC_TOWER",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000010",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000052",
+        "surgery_id": "b0000000-0000-0000-0000-000000000024",
+        "required_category": "ELECTROSURGICAL_UNIT",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000037",
+        "criticality": "IMPORTANT",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000053",
+        "surgery_id": "b0000000-0000-0000-0000-000000000024",
+        "required_category": "SURGICAL_MONITOR",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000028",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 25 (Today 19 Oct - OR-2 - AT RISK: PM Overdue on Anesthesia)
+    {
+        "id": "c0000000-0000-0000-0000-000000000054",
+        "surgery_id": "b0000000-0000-0000-0000-000000000025",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000008",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000055",
+        "surgery_id": "b0000000-0000-0000-0000-000000000025",
+        "required_category": "CARM_FLUOROSCOPY",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000019",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000056",
+        "surgery_id": "b0000000-0000-0000-0000-000000000025",
+        "required_category": "ELECTROSURGICAL_UNIT",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000038",
+        "criticality": "IMPORTANT",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000057",
+        "surgery_id": "b0000000-0000-0000-0000-000000000025",
+        "required_category": "SURGICAL_MONITOR",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000029",
+        "criticality": "STANDARD",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 26 (Today 19 Oct - OR-3 - NOT READY: Anesthesia UNDER_REPAIR)
+    {
+        "id": "c0000000-0000-0000-0000-000000000058",
+        "surgery_id": "b0000000-0000-0000-0000-000000000026",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000006",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000059",
+        "surgery_id": "b0000000-0000-0000-0000-000000000026",
+        "required_category": "CARM_FLUOROSCOPY",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000020",
+        "criticality": "IMPORTANT",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000060",
+        "surgery_id": "b0000000-0000-0000-0000-000000000026",
+        "required_category": "ELECTROSURGICAL_UNIT",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000039",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000061",
+        "surgery_id": "b0000000-0000-0000-0000-000000000026",
+        "required_category": "SURGICAL_MONITOR",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000030",
+        "criticality": "CRITICAL",
+        "quantity": 2,
+        "is_manual_override": false
+    },
+    // Surgery 27 (Today 19 Oct - OR-4 - READY)
+    {
+        "id": "c0000000-0000-0000-0000-000000000062",
+        "surgery_id": "b0000000-0000-0000-0000-000000000027",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000002",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000063",
+        "surgery_id": "b0000000-0000-0000-0000-000000000027",
+        "required_category": "CARM_FLUOROSCOPY",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000018",
+        "criticality": "IMPORTANT",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000064",
+        "surgery_id": "b0000000-0000-0000-0000-000000000027",
+        "required_category": "ELECTROSURGICAL_UNIT",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000037",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000065",
+        "surgery_id": "b0000000-0000-0000-0000-000000000027",
+        "required_category": "SURGICAL_MONITOR",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000031",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 28 (20 Oct - OR-1 - READY)
+    {
+        "id": "c0000000-0000-0000-0000-000000000066",
+        "surgery_id": "b0000000-0000-0000-0000-000000000028",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000001",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    {
+        "id": "c0000000-0000-0000-0000-000000000067",
+        "surgery_id": "b0000000-0000-0000-0000-000000000028",
+        "required_category": "LAPAROSCOPIC_TOWER",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000010",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 29 (20 Oct - OR-5 - AT RISK: Anesthesia AST-ANES-004)
+    {
+        "id": "c0000000-0000-0000-0000-000000000068",
+        "surgery_id": "b0000000-0000-0000-0000-000000000029",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000004",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 30 (21 Oct - OR-2 - READY)
+    {
+        "id": "c0000000-0000-0000-0000-000000000069",
+        "surgery_id": "b0000000-0000-0000-0000-000000000030",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000003",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 31 (21 Oct - OR-3 - READY)
+    {
+        "id": "c0000000-0000-0000-0000-000000000070",
+        "surgery_id": "b0000000-0000-0000-0000-000000000031",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000005",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 32 (22 Oct - OR-4 - NOT READY: AST-ANES-006 assigned)
+    {
+        "id": "c0000000-0000-0000-0000-000000000071",
+        "surgery_id": "b0000000-0000-0000-0000-000000000032",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000006",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
+    },
+    // Surgery 33 (23 Oct - OR-6 - READY)
+    {
+        "id": "c0000000-0000-0000-0000-000000000072",
+        "surgery_id": "b0000000-0000-0000-0000-000000000033",
+        "required_category": "ANESTHESIA_MACHINE",
+        "assigned_asset_id": "a0000000-0000-0000-0000-000000000001",
+        "criticality": "CRITICAL",
+        "quantity": 1,
+        "is_manual_override": false
     }
 ];
 
 let assetsStore = [...initialAssets];
 let breakdownsStore = [...initialBreakdowns];
-let maintenanceStore = [...initialMaintenance];
+let maintenanceStore = initialMaintenance.map(m => ({
+    ...m,
+    cost: m.cost && m.cost < 5000 ? m.cost * 80 : (m.cost || 0)
+}));
 let surgeriesStore = [...initialSurgeries];
 let surgeryRequiredAssetsStore = [...initialSurgeryRequiredAssets];
 
@@ -2321,8 +2840,8 @@ async function getMaintenanceRecords(assetId) {
 
 async function createMaintenanceRecord(data) {
     if (!data.asset_id) throw new Error('asset_id is required for maintenance record');
-    const assetExists = assetsStore.some(a => a.id === data.asset_id);
-    if (!assetExists) throw new Error(`Referenced asset does not exist: ${data.asset_id}`);
+    const asset = assetsStore.find(a => a.id === data.asset_id);
+    if (!asset) throw new Error(`Referenced asset does not exist: ${data.asset_id}`);
 
     const record = {
         id: data.id || `d${Math.random().toString(36).substring(2, 10)}-0000-0000-0000-000000000000`,
@@ -2330,12 +2849,35 @@ async function createMaintenanceRecord(data) {
         maintenance_type: data.maintenance_type || 'PREVENTIVE',
         performed_by: data.performed_by || 'Biomedical Technician',
         performed_at: data.performed_at || new Date().toISOString(),
+        status: data.status || 'COMPLETED',
+        next_due_date: data.next_due_date || null,
         details: data.details || '',
         parts_replaced: data.parts_replaced || [],
-        cost: data.cost || 0,
+        cost: data.cost !== undefined ? Number(data.cost) : 0,
+        time_taken_hours: data.time_taken_hours !== undefined && data.time_taken_hours !== null && data.time_taken_hours !== '' ? Number(data.time_taken_hours) : null,
+        action_needed: data.action_needed || '',
         created_at: new Date().toISOString()
     };
     maintenanceStore.push(record);
+
+    // Update asset's last maintenance date and next due date
+    asset.last_pm_date = record.performed_at;
+    if (record.next_due_date) {
+        asset.next_pm_due_date = record.next_due_date;
+        const dueDate = new Date(record.next_due_date);
+        const now = new Date();
+        asset.is_pm_overdue = dueDate < now;
+    }
+
+    // If maintenance was completed and asset was UNDER_MAINTENANCE:
+    // Only return to AVAILABLE if there are NO open breakdowns for this asset
+    const hasOpenBreakdown = breakdownsStore.some(
+        b => b.asset_id === data.asset_id && (b.resolved_at === null || b.resolved_at === undefined)
+    );
+    if (record.status === 'COMPLETED' && asset.status === 'UNDER_MAINTENANCE' && !hasOpenBreakdown) {
+        asset.status = 'AVAILABLE';
+    }
+
     return record;
 }
 
@@ -2356,6 +2898,7 @@ async function createBreakdownIncident(data) {
         severity: data.severity || 'MEDIUM',
         failure_type: data.failure_type || 'OTHER',
         description: data.description || 'Equipment failure reported',
+        reported_by: data.reported_by || null,
         resolution_notes: '',
         downtime_hours: 0,
         created_at: new Date().toISOString()

@@ -21,7 +21,7 @@ const DEMO_USER_CREDENTIALS = [
         email: 'biomed@assetiq.in',
         password: 'BiomedPass2026!',
         name: 'Eng. Vikram Rao (Biomedical Lead)',
-        landingUrl: '/assets'
+        landingUrl: '/engineer-dashboard'
     },
     {
         role: null,
