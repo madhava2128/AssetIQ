@@ -47,7 +47,7 @@ export function isValidAssetId(id: string): boolean {
  * Never hardcodes a domain, localhost, or a preview URL in QR data.
  */
 export function getAppBaseUrl(): string {
-    const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
+    const envUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://assetiq-omega.vercel.app';
     return envUrl.replace(/\/+$/, '');
 }
 
