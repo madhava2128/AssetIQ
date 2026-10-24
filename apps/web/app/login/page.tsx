@@ -160,6 +160,77 @@ function LoginForm() {
                             {loading ? 'Signing in...' : 'Sign in'}
                         </button>
                     </form>
+
+                    {/* Roles Specification & Quick-Select */}
+                    <div className="mt-6 pt-5 border-t border-border">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-caption font-semibold text-text-primary uppercase tracking-wider text-[11px]">
+                                Roles & Demo Accounts
+                            </span>
+                            <span className="text-caption text-text-muted text-[11px]">
+                                Click a role to autofill
+                            </span>
+                        </div>
+
+                        <div className="space-y-2">
+                            {[
+                                {
+                                    role: 'hospital_admin',
+                                    title: 'Hospital Administrator',
+                                    email: 'admin@assetiq.in',
+                                    password: 'AdminPass2026!',
+                                    description: 'Hospital overview, readiness analytics & governance',
+                                    landing: 'Overview'
+                                },
+                                {
+                                    role: 'ot_admin',
+                                    title: 'OT Administrator',
+                                    email: 'ot.admin@assetiq.in',
+                                    password: 'OtPass2026!',
+                                    description: 'Surgery scheduling & room equipment allocation',
+                                    landing: 'Surgeries'
+                                },
+                                {
+                                    role: 'biomedical_engineer',
+                                    title: 'Biomedical Engineer',
+                                    email: 'biomed@assetiq.in',
+                                    password: 'BiomedPass2026!',
+                                    description: 'Asset catalog, maintenance, QR tracking & incidents',
+                                    landing: 'Biomedical Lead'
+                                }
+                            ].map((r) => (
+                                <button
+                                    key={r.role}
+                                    type="button"
+                                    onClick={() => {
+                                        setEmail(r.email);
+                                        setPassword(r.password);
+                                        setErrorMessage(null);
+                                    }}
+                                    className="w-full text-left p-3 rounded-[4px] border border-border hover:border-accent hover:bg-subtle transition-colors flex items-start justify-between group cursor-pointer bg-panel"
+                                    title={`Click to use ${r.title} credentials`}
+                                >
+                                    <div className="min-w-0 pr-2">
+                                        <div className="text-caption font-semibold text-text-primary flex items-center gap-1.5 flex-wrap">
+                                            <span>{r.title}</span>
+                                            <span className="text-[11px] font-normal text-text-muted">
+                                                · {r.landing}
+                                            </span>
+                                        </div>
+                                        <p className="text-[12px] text-text-secondary mt-0.5">
+                                            {r.description}
+                                        </p>
+                                        <div className="text-[11px] text-text-muted font-mono mt-1">
+                                            {r.email}
+                                        </div>
+                                    </div>
+                                    <span className="shrink-0 text-caption font-semibold text-accent group-hover:underline text-[12px] pt-0.5">
+                                        Use role →
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
